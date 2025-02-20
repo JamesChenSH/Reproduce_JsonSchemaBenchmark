@@ -67,6 +67,8 @@ if __name__ == "__main__":
         all_ttft.append(ttft)
         all_tgt.append(tgt)
         
+        print(output)
+        
     print(f"Median GCT: {np.median(all_gct)}")
     print(f"Median TTFT: {np.median(all_ttft)}")
     print(f"Median TGT: {np.median(all_tgt)}")
