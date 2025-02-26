@@ -4,23 +4,21 @@ import time
 class SyncodeModel:
     
     def __init__(self, json_schema):
-        self.syncode = Syncode(model="microsoft/phi-2", grammar='json', max_new_tokens=50)
+        self.syncode = Syncode(model="microsoft/phi-2", grammar='json', max_new_tokens=100)
         self.prompt = """
-        <s>[ INST ] << SYS > > 
+<s>[INST]<<SYS>> 
 You are a helpful a ss is ta n t that answers in JSON . Here ’ s the json schema you must adhere to :
-< schema >
+<schema>
 { ’ title ’: ’ Person ’ , ’ type ’: ’ object ’ , ’ properties ’: { ’ firstName ’: { ’ type ’: ’ string ’ , ’
 description ’: " The person ’ s first name ."} , ’ lastName ’: { ’ type ’: ’ string ’ , ’ description ’:
 " The person ’ s last name ."} , ’ age ’: { ’ description ’: ’ Age in years which must be equal to
 or greater than zero . ’ , ’ type ’: ’ integer ’ , ’ minimum ’: 0}} , ’ required ’: [ ’ firstName ’ , ’
 lastNName', 'age']}
-</ schema >
-
-< </ SYS > >
-
+</schema>
+<</SYS>>
 Please generate a JSON output for a person ’ s profile that includes their first name , last
 name , and age . The first name should be ’ Alice ’ , the last name ’ Johnson ’ , and the age
-35. [/ INST ]
+35. [/INST]
         """
         
         self.sys_prompt = f'''You are a helpful assistant that answers in JSON. You need to generate a JSON object that matches the schema below.

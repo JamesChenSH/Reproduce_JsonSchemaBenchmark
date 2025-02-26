@@ -6,13 +6,13 @@ class OutlinesModel(BaseModel):
     
     def __init__(self, model_name):
         super().__init__()
-        self.generator = outlines.generate.SequenceGenerator(model=model_name)
+        self.model = outlines.models.transformers(model_name)
     
     def compile_grammar(self, json_schema):
-        return outlines.generate.json(schema_object=json_schema)
+        return outlines.generate.json(self.model, schema_object=json_schema)
     
     def _call_engine(self, prompt, compiled_grammar):
-        generator = self.generator.stream(prompt)
+        generator = compiled_grammar.stream(prompt)
         output = ""
         for i, token in enumerate(generator):
             if i == 0:

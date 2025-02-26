@@ -1,0 +1,10 @@
+torch
+datasets
+huggingface-hub
+transformers
+guidance
+outlines
+numpy==2.1.1
+numba
+llama-cpp-python
+# llguidance==0.5.1
