@@ -16,6 +16,6 @@ class XGrammarModel(BaseModel):
     
     def _call_engine(self, prompt, compiled_grammar):
         output = self.hf_model.generate(prompt,
-        logits_processor=[compiled_grammar, timeit_logit_processor])→
+        logits_processor=[compiled_grammar, timeit_logit_processor])
         first_tok_arr_time = timeit_logit_processor.timestamps[0]
         return output, first_tok_arr_time

@@ -1,7 +1,7 @@
 import time
-import stopit
+# import stopit
 class BaseModel:
-    @stopit.threading_timeoutable(timeout=40)
+    # @stopit.threading_timeoutable(timeout=40)
     def compile_grammar(self, json_schema):
         status = "unknown"
         try:
@@ -14,15 +14,20 @@ class BaseModel:
         return compiled_grammar, status
     
     def generate(self, prompt, json_schema=None):
+        # print("Compiling grammar")
         compile_start_time = time.time()
         compiled_grammar = self.compile_grammar(json_schema)
         compile_end_time = time.time()
         # GCT (Grammar Compilation Time)
         gct = compile_end_time - compile_start_time
+        # print("Grammar compiled")
+        
+        # print("Generating output")
         gen_start_time = time.time()
         output, first_tok_arr_time = self._call_engine(prompt,compiled_grammar)
         # TTFT (Time to First Token)
         ttft = first_tok_arr_time - gen_start_time
+        # print("Output generated")
         gen_end_time = time.time()
         # TGT (Total Generation Time)
         tgt = gen_end_time - gen_start_time
