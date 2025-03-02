@@ -7,4 +7,4 @@ outlines
 numpy==2.1.1
 numba
 llama-cpp-python
-# llguidance==0.5.1
+llguidance==0.5.1

@@ -16,7 +16,10 @@ class LlamaCppModel(BaseModel):
         return llama_cpp.llama_grammar.LlamaGrammar.from_json_schema(json_schema)
     
     def _call_engine(self, prompt, compiled_grammar):
-        generator = self.llama_cpp_model.create_chat_completion(prompt, grammar=compiled_grammar, temperature=0.7, stream=True)
+        messages = [
+            {'role': 'user', 'content': ''}
+        ]
+        generator = self.llama_cpp_model.create_chat_completion(messages, grammar=compiled_grammar, temperature=0.7, stream=True)
         output = ""
         for i, content in enumerate(generator):
             if i == 0:
@@ -26,4 +29,4 @@ class LlamaCppModel(BaseModel):
             except KeyError as e:
                 token = ''
             output += token
-        return output, first_tok_arr_time
+        return output, first_tok_arr_time, i
