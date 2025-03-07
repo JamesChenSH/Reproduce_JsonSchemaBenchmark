@@ -13,7 +13,7 @@ class BaseModel:
             status = "schema_not_supported"
         return compiled_grammar, status
     
-    def generate(self, prompt, json_schema=None):
+    def generate_steam(self, prompt, json_schema=None):
         compile_start_time = time.time()
         compiled_grammar = self.compile_grammar(json_schema)
         compile_end_time = time.time()
@@ -32,6 +32,9 @@ class BaseModel:
         avg_token_gen_time = tgt/gen_length
         
         return output, gct, ttft, tgt, avg_token_gen_time
+    
+    def generate_all(self, prompt, json_schema=None):
+        raise NotImplementedError
     
     def _call_engine(self, prompt, compiled_grammar):
         raise NotImplementedError

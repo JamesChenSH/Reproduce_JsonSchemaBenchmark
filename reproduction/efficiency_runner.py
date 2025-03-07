@@ -18,7 +18,7 @@ def get_args_parser():
     parser.add_argument("--llm", type=str, default='unsloth/Meta-Llama-3.1-8B-Instruct')
     parser.add_argument("--wrapper", type=str, default='guidance')
     parser.add_argument("--length", type=int, default=100000)
-    parser.add_argument("--is_cpp", type=bool, default=False)
+    parser.add_argument("--is_cpp", action='store_true', default=False)
     return parser
 
 
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     
         # print(json.loads(schema))
         try:
-            output, gct, ttft, tgt, avg_tkn_t = model.generate(prompt, schema)
+            output, gct, ttft, tgt, avg_tkn_t = model.generate_steam(prompt, schema)
             print(output, flush=True)
             
             validate_enhanaced(json.loads(output), json.loads(schema))
