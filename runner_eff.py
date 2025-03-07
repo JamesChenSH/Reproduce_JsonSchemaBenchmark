@@ -8,8 +8,8 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 import torch
 import numpy as np
-from BaseModel import BaseModel
-from validation import validate_enhanaced
+from models.BaseModel import BaseModel
+from utils.validation import validate_enhanaced
 
 
 
