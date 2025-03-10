@@ -1,7 +1,7 @@
 import llama_cpp, time
 
 import llama_cpp.llama_grammar
-from BaseModel import BaseModel
+from models.BaseModel import BaseModel
 
 class LlamaCppModel(BaseModel):
     
@@ -15,11 +15,12 @@ class LlamaCppModel(BaseModel):
     def compile_grammar(self, json_schema):
         return llama_cpp.llama_grammar.LlamaGrammar.from_json_schema(json_schema)
     
-    def _call_engine(self, prompt, compiled_grammar):
-        messages = [
-            {'role': 'user', 'content': ''}
-        ]
-        generator = self.llama_cpp_model.create_chat_completion(messages, grammar=compiled_grammar, temperature=0.7, stream=True)
+    def _call_engine(self, prompts, compiled_grammar):
+        if isinstance(prompts, str):
+            prompts = [
+                {'role': 'user', 'content': prompts}
+            ]
+        generator = self.llama_cpp_model.create_chat_completion(prompts, grammar=compiled_grammar, temperature=0.7, stream=True)
         output = ""
         for i, content in enumerate(generator):
             if i == 0:

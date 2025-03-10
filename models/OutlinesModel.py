@@ -5,7 +5,7 @@ import outlines.generate.text
 import outlines.models
 import outlines.models.transformers
 
-from BaseModel import BaseModel
+from models.BaseModel import BaseModel
 
 class OutlinesModel(BaseModel):
     

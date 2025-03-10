@@ -1,9 +1,10 @@
 import guidance, time, torch, json
 import llama_cpp
-from BaseModel import BaseModel
-from guidance import models
+from guidance import models, system, assistant, user
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
+
+from models.BaseModel import BaseModel
 
 class GuidanceModel(BaseModel):
     
@@ -31,8 +32,18 @@ class GuidanceModel(BaseModel):
     def compile_grammar(self, json_schema):
         return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=0.2, max_tokens=300)
     
+    
     def _call_engine(self, prompt, compiled_grammar):
-        generator = self.guidance_model.stream() + prompt + compiled_grammar
+        if isinstance(prompt, str):
+            generator = self.guidance_model.stream() + prompt
+        else:
+            for i, p in enumerate(prompt):
+                if i == 0:
+                    generator = self.guidance_model.stream() + p
+                else:
+                    generator = generator + p
+
+        generator = generator + compiled_grammar
         for i, state in enumerate(generator):
             if i == 0:
                 first_state_arr_time = time.time()

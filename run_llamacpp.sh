@@ -15,6 +15,6 @@ pip install --no-index --upgrade pip
 pip install --no-index -r requirements.txt
 CMAKE_ARGS="-DGGML_CUDA=on" pip install --upgrade --force-reinstall --no-cache-dir llama-cpp-python
 
-python ./runner.py --wrapper llamacpp
+python ./runner_efficiency.py --wrapper llamacpp
 
 deactivate                       

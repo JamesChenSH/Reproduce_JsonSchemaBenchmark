@@ -8,6 +8,6 @@
 
 source /w/284/jameschen/.venv/bin/activate
 
-python ./runner_eff.py --wrapper outlines
+python ./runner_efficiency.py --wrapper outlines
 
 deactivate                       
