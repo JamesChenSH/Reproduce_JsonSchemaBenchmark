@@ -67,7 +67,7 @@ if __name__ == "__main__":
     
     model = get_model(args)
     
-    data_path = "../../jsonschemabench/data/Github_easy"
+    data_path = "../jsonschemabench/data/Github_easy"
     prompt = 'Generate a json object'
     
     files = os.listdir(data_path)

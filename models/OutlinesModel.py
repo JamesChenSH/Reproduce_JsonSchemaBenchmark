@@ -45,3 +45,6 @@ class OutlinesModel(BaseModel):
             if i > 300:
                 break
         return output, first_tok_arr_time, i
+    
+    def close_model(self):
+        pass

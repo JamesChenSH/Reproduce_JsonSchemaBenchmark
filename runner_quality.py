@@ -1,5 +1,5 @@
 import time
-import os, sys, time, json
+import os, sys, time, json, random
 from argparse import ArgumentParser
 
 os.environ['HF_HOME'] = './cache/'
@@ -9,11 +9,11 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 import torch
 import numpy as np
+
 from models.BaseModel import BaseModel
 from utils.validation import validate_enhanaced
 from datasets import load_dataset
 from textwrap import dedent
-
 
 def get_args_parser():
     parser = ArgumentParser()
@@ -59,63 +59,122 @@ def get_model(args) -> BaseModel:
     return model
 
 
-def test_Quality(model: BaseModel, dataset):
+def test_Quality(model: BaseModel, dataset, args):
 
-    output_schema = '{"reasoning":<reasoning about the answer>, "answer": <final answer>}'
+    example_q = dataset['train']['question']
+    example_a = dataset['train']['answer']
+            
+    output_schema = {
+        "properties": {
+            "reasoning": {
+                "title": "Reasoning", 
+                "type": "string"
+            }, 
+            "answer": {
+                "title": "Answer", 
+                "type": "integer"
+            }
+        }, 
+        "required": [
+            "reasoning", 
+            "answer"
+        ], 
+        "title": "ReturnedModel", 
+        "type": "object"
+    }
+
+    output_schema = json.dumps(output_schema)
+
     messages = [{
         "role": "system",
-        "content": dedent(f"""
+        "content": dedent("""
         You are an expert in solving grade school math tasks. You will be presented with a grade-school math word problem and be asked to solve it.
         Before answering you should reason about the problem (using the "reasoning" field in the JSON response described below).
             
         You will always repond with JSON in the format described below:
         
-        {output_schema}
+        {"reasoning":<reasoning about the answer>, "answer": <final answer>}
 
         The "reasoning" field will contain your reasoning about the sequence of events, and the "answer" will contain the single letter representing the correct choice you are presented with.
         """)
     }]
 
-    example_question = [
-        "There are 15 trees in the grove. Grove workers will plant trees in the grove today. After they are done, there will be 21 trees. How many trees did the grove workers plant today?",
-        "If there are 3 cars in the parking lot and 2 more cars arrive, how many cars are in the parking lot?",
-        "Leah had 32 chocolates and her sister had 42. If they ate 35, how many pieces do they have left in total?"
-    ]
 
-    example_response = [
-        """{"reasoning": "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = 6.", "answer": 6}""",
-        """{"reasoning": "There are originally 3 cars. 2 more cars arrive. 3 + 2 = 5.", "answer": 5}""",
-        """{"reasoning": "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = 74. After eating 35, they had 74 - 35 = 39.","answer": 39"""
-    ]
-
-    for i in range(len(example_question)):
+    for i in random.sample(range(len(example_q)), 8):
         messages.append(
         {
             "role": "user",
-            "content": """Question: {question}""".format(question=example_question[i])
+            "content": """Question: {question}""".format(question=example_q[i])
         }
         )
         messages.append(
         {
             "role": "assistant",
-            "content": example_response[i]        
+            "content": example_a[i]        
         })
 
-    for question in dataset:
-
+    correct = 0
+    incorrects = []
+    
+    questions = dataset['test']['question']
+    answers = dataset['test']['answer']
+    
+    for question, answer in zip(questions, answers):
+        answer = int(answer.split('####')[1].replace(",", "").strip())
+        # We can use regex to find free generation results
+        # answer_regex = r'"answer":[ ]?([1-9][0-9]{0,9})'
         messages.append(
             {
                 "role": "user",
-                "content": """Question: {question}", """.format(question=question)
+                "content": """Question: {question}, """.format(question=question)
             })
         # Run LLM here
-        output, gen_len = model.generate_all(messages, output_schema)
-        print(output)
+        try: 
+            output, gen_len = model.generate_all(messages, output_schema)
+        except Exception as e:
+            print(f"Generation Error: {e}", flush=True)
+            incorrects.append({
+                "question": question, 
+                "reasoning": "Error During Generation",
+                "generated_answer": output, 
+                "correct_answer": answer
+            })
+            messages.pop()
+            continue
+        # Parse to json
+        try:
+            output = json.loads(output)
+        except json.JSONDecodeError:
+            print("Failed to parse output", flush=True)
+            incorrects.append({
+                "question": question, 
+                "reasoning": "Failed to parse output",
+                "generated_answer": output, 
+                "correct_answer": answer
+            })
+            messages.pop()
+            continue
+        # Validate output
+        gen_answer = output['answer']
+        if gen_answer == answer:
+            print("Correct", flush=True)
+            correct += 1
+        else:
+            print("Incorrect", flush=True)
+            incorrects.append({
+                "question": question, 
+                "reasoning": output['reasoning'],
+                "generated_answer": gen_answer, 
+                "correct_answer": answer
+            })
 
         # Remove the added question and results
         messages.pop()
 
-
+    print("Correct: {correct}/{total}, accuracy: {acc}%".format(correct=correct, total=len(dataset), acc=correct/len(dataset)), flush=True)
+    with open(f"incorrects_{args.wrapper}.json", "w") as f:
+        json.dump(incorrects, f, indent=4)
+    model.close_model()
         
 
 if __name__ == "__main__":
@@ -124,6 +183,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     
     model = get_model(args)
-    gsm8k = load_dataset('gsm8k', 'main')['test']
+    gsm8k = load_dataset('gsm8k', 'main')
     
-    test_Quality(model, gsm8k)
+    test_Quality(model, gsm8k, args)

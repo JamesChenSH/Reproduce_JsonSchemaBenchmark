@@ -2,3 +2,5 @@ data/
 /__pycache__
 /cache
 /outputs
+*.out
+*.json

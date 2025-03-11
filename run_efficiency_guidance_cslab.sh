@@ -8,8 +8,8 @@
 
 source /w/284/jameschen/.venv/bin/activate
 
-export PATH="/usr/local/cuda/bin:${PATH}"
-CMAKE_ARGS="-DGGML_CUDA=on" pip install --force-reinstall --no-cache-dir llama-cpp-python==0.3.2
+# export PATH="/usr/local/cuda/bin:${PATH}"
+# CMAKE_ARGS="-DGGML_CUDA=on" pip install --force-reinstall --no-cache-dir llama-cpp-python==0.3.2
 
 python ./runner_efficiency.py --wrapper guidance --is_cpp
 

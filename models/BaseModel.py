@@ -22,7 +22,7 @@ class BaseModel:
         
         # print("Generating output")
         gen_start_time = time.time()
-        output, first_tok_arr_time, gen_length = self._call_engine(prompt,compiled_grammar)
+        output, first_tok_arr_time, gen_length = self._call_engine(prompt,compiled_grammar, stream=True)
         # TTFT (Time to First Token)
         ttft = first_tok_arr_time - gen_start_time
         # print("Output generated")
@@ -39,4 +39,7 @@ class BaseModel:
         return output, gen_length
     
     def _call_engine(self, prompt, compiled_grammar):
+        raise NotImplementedError
+    
+    def close_model(self):
         raise NotImplementedError
