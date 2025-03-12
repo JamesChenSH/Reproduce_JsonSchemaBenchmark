@@ -19,6 +19,7 @@ class GuidanceModel(BaseModel):
                 n_gpu_layers=-1,
                 logits_all=True,
                 n_ctx=2048,
+                verbose=False
             )     
             self.guidance_model = models.llama_cpp.LlamaCpp(self.llm)
         else:

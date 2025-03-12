@@ -4,3 +4,5 @@ data/
 /outputs
 *.out
 *.json
+*.sh
+*/__pycache__
