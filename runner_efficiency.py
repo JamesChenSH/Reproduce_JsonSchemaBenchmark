@@ -138,4 +138,5 @@ if __name__ == "__main__":
     
     print(f"Invalid count: {invalid_count}", flush=True)
     # print(f"Error schemas: {error_schemas}", flush=True)
+    model.close_model()
     

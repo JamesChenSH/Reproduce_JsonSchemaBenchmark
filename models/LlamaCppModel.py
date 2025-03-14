@@ -11,7 +11,8 @@ class LlamaCppModel(BaseModel):
             model_path='cache/hub/models--QuantFactory--Meta-Llama-3.1-8B-Instruct-GGUF/snapshots/b6d5cca03f341fd97b7657420bd60e070835b7e5/Meta-Llama-3.1-8B-Instruct.Q6_K.gguf',
             n_gpu_layers=-1,
             n_ctx=2048,
-            verbose=False
+            verbose=False,
+            seed=19181111
         )
     
     def compile_grammar(self, json_schema):

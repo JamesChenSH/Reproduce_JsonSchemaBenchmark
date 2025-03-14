@@ -14,7 +14,8 @@ class VanillaModel(BaseModel):
                 n_gpu_layers=-1,
                 logits_all=True,
                 n_ctx=2048,
-                verbose=False
+                verbose=False,
+                seed=19181111
             )
         else:
             # transformer method

@@ -9,6 +9,8 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 from models.BaseModel import BaseModel
 from utils.logger import Logger
 
+import utils.prompts as prompts
+
 from datasets import load_dataset
 from textwrap import dedent
 
@@ -21,6 +23,7 @@ def get_args_parser():
     parser.add_argument("--is_cpp", action='store_true', default=False)
     parser.add_argument("--json_shots", action='store_true', default=False)
     parser.add_argument("--verbose", action='store_true', default=False)
+    parser.add_argument("--run_all", action='store_true', default=False, help="Run a systematic test on the given wrapper from n_shot=1 to n_shot=8")
     return parser
 
 def get_model(args) -> BaseModel:
@@ -89,7 +92,7 @@ def validate_answer(question, output, answer, is_json=False) -> tuple:
         try:
             assert 'reasoning' in output
             assert 'answer' in output
-        except KeyError:
+        except AssertionError:
             error_msg = 'Generated JSON does not fit schema'
             error_json = {
                 "question": question, 
@@ -134,38 +137,39 @@ def validate_answer(question, output, answer, is_json=False) -> tuple:
         return False, error_json, error_msg
 
 
-def test_Quality(model: BaseModel, dataset, args, logger: Logger, output_file_name):
+def test_Quality(
+    model: BaseModel, 
+    test_dataset,
+    wrapper: str, 
+    num_shots: int, 
+    example_questions: list,
+    example_answers: list,
+    logger: Logger, 
+    output_file_name: str, 
+    use_json_shots=False, 
+    is_cpp=True):
+    '''
+    Run a quality test using the given parameters. It gets the accuracy of the model performing
+    on given dataset. 
+    '''
 
     # Log Metadata of Current Test here
     gpu_model = torch.cuda.get_device_name()
-    cur_wrapper = f"{args.wrapper} wrapper" if args.wrapper != 'llm' else "Vanilla LLM"
+    cur_wrapper = f"{wrapper} wrapper" if wrapper != 'llm' else "Vanilla LLM"
     
-    logger.log(f"Testing Quality of {cur_wrapper} with {args.num_shots} shots", force=True) 
+    logger.log(f"Testing Quality of {cur_wrapper} with {num_shots} shots", force=True) 
     logger.log(f"GPU: {gpu_model}", force=True)
     
-    if args.is_cpp or cur_wrapper == 'llamacpp':
+    if is_cpp or cur_wrapper == 'llamacpp':
         logger.log("Backend: LlamaCpp", force=True)
     else:
         logger.log("Backend: Transformers", force=True)
-    if args.json_shots:
+    if use_json_shots:
         logger.log("Using JSON Shots", force=True)
     
-    # Load example questions and answers
-    example_q = dataset['train']['question']
-    all_answers = dataset['train']['answer']
-    
-    if args.json_shots:
-        # Test Few-Shots with JSON format to ensure sample consistency
-        example_a = []
-        for answer in all_answers:
-            example_ans = {
-                "reasoning": answer.split('####')[0].strip(),
-                "answer": int(answer.split('####')[1].replace(",", "").strip())
-            }
-            example_a.append(json.dumps(example_ans))
-    else:
-        # Use Natural Language Few Shots
-        example_a = all_answers
+    # Load test questions and answers
+    questions = test_dataset['question']
+    answers = test_dataset['answer']
     
     # Defines the schema for output   
     output_schema = {
@@ -188,38 +192,17 @@ def test_Quality(model: BaseModel, dataset, args, logger: Logger, output_file_na
     }
 
     output_schema = json.dumps(output_schema)
-
-    messages = [{
-        "role": "system",
-        "content": dedent("""
-        You are an expert in solving grade school math tasks. You will be presented with a grade-school math word problem and be asked to solve it.
-        Before answering you should reason about the problem (using the "reasoning" field in the JSON response described below).
-            
-        You will always repond with JSON in the format described below:
-        
-        {"reasoning":<reasoning about the answer>, "answer": <final answer>}
-
-        The "reasoning" field will contain your reasoning about the sequence of events, and the "answer" will contain the single letter representing the correct choice you are presented with.
-        """)
-    }]
-
-    # Compose Few-Shot examples
-    for i in random.sample(range(len(example_q)), args.num_shots):
-        messages.append(
-        {
-            "role": "user",
-            "content": """Question: {question}""".format(question=example_q[i])
-        })
-        messages.append(
-        {
-            "role": "assistant",
-            "content": example_a[i]        
-        })
-
+    
+    messages = prompts.create_prompt_template(
+        example_questions=example_questions, 
+        example_answers=example_answers, 
+        n_shots=num_shots, 
+        is_json=use_json_shots
+    )
+    print(messages)
+    
     correct = 0
     incorrects = []
-    questions = dataset['test']['question']
-    answers = dataset['test']['answer']
     
     for i, (question, answer) in enumerate(zip(questions, answers)):
         answer = int(answer.split('####')[1].replace(",", "").strip())
@@ -246,7 +229,7 @@ def test_Quality(model: BaseModel, dataset, args, logger: Logger, output_file_na
             messages.pop()
             continue
         
-        success, error_json, msg = validate_answer(question, output, answer, args.json_shots)
+        success, error_json, msg = validate_answer(question, output, answer,use_json_shots)
         if success:
             correct += 1
         else:
@@ -254,6 +237,9 @@ def test_Quality(model: BaseModel, dataset, args, logger: Logger, output_file_na
             incorrects.append(error_json)
         # Restore the messages
         messages.pop()
+        
+        if i % 100 == 0:
+            logger.log(f"Question {i} completed", force=True)
         
     acc = correct/len(questions)*100
     
@@ -265,9 +251,23 @@ def test_Quality(model: BaseModel, dataset, args, logger: Logger, output_file_na
         json.dump(incorrects, f, indent=4)
         
     return acc
-        
+
+
+
+
+def run_single_test(model, dataset, run_count=3):
+    
+    pass
+    
+
+
+
+
 
 if __name__ == "__main__":
+    
+    random.seed(42)
+    torch.manual_seed(42)
     
     parser = get_args_parser()
     args = parser.parse_args()
@@ -277,13 +277,43 @@ if __name__ == "__main__":
     
     logger = Logger(args.verbose)
     
+    # Get unified n-shot prompt for tests
+    example_questions = gsm8k['train']['question']
+    raw_answers = gsm8k['train']['answer']
+    
+    if args.json_shots:
+        example_answers = []
+        for answer in raw_answers:
+            example_answers.append(prompts.parse_answer(answer))
+    else:
+        example_answers = raw_answers
+    
+    # Get the number of shots we want to experiment with
+    num_shots = []
+    if args.run_all:
+        num_shots = range(1, 9)
+    else:
+        num_shots = [args.num_shots]
+    
     # Run Test 3 times and get average. Expect time is 3 hours    
     accs = []
     for run_count in range(3):    
         logger.log(f"Run {run_count + 1}", force=True, header="[SYSTEM]")
-        output_file_name = f"quality_{args.wrapper}_{args.num_shots}_{'JSON' if args.json_shots else 'NL'}_shots_run_{run_count + 1}.json"
-        acc = test_Quality(model, gsm8k, args, logger, output_file_name)
+        output_file_name = f"quality_{args.wrapper}_{args.num_shots}_{'JSON' if args.json_shots else 'NL'}_shots_run_{run_count + 1}"
+        
+        acc = test_Quality(
+            model=model, 
+            test_dataset=gsm8k['test'][0:4],
+            wrapper=args.wrapper, 
+            num_shots=args.num_shots,
+            example_questions=example_questions,
+            example_answers=example_answers,
+            logger=logger, 
+            output_file_name=output_file_name + ".json",
+            use_json_shots=args.json_shots,
+            is_cpp=args.is_cpp
+        )
         accs.append(acc)
+    logger.log(f"Average Accuracy: {sum(accs)/len(accs)}", force=True, header="[SYSTEM]")
     
     model.close_model()
-    logger.log(f"Average Accuracy: {sum(accs)/len(accs)}", force=True, header="[SYSTEM]")

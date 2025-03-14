@@ -19,7 +19,8 @@ class GuidanceModel(BaseModel):
                 n_gpu_layers=-1,
                 logits_all=True,
                 n_ctx=2048,
-                verbose=False
+                verbose=False,
+                seed=19181111
             )     
             self.guidance_model = models.llama_cpp.LlamaCpp(self.llm)
         else:
@@ -36,30 +37,32 @@ class GuidanceModel(BaseModel):
         return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=0.2, max_tokens=512)
     
     
-    def _call_engine(self, prompt, compiled_grammar):
+    def _call_engine(self, prompt, compiled_grammar, stream=False):
         len_prompt = 0
+        generator = self.guidance_model.stream()
         if isinstance(prompt, str):
-            generator = self.guidance_model.stream() + prompt
+            generator = generator + prompt
             len_prompt = len(prompt)
         else:
-            generator = self.guidance_model.stream()
-            for p in prompt:
+            all_prompts = ''
+            for i, p in enumerate(prompt):
+                if i == 0:
+                    all_prompts = all_prompts + '<|begin_of_text|>'
                 if p['role'] == 'user':
-                    with user():
-                        generator = generator + p['content']
+                    all_prompts += '<|start_header_id|>user<|end_header_id|>' + p['content'] + '<|eot_id|>'
                 elif p['role'] == 'assistant':
-                    with assistant():
-                        generator = generator + p['content']
+                    all_prompts += '<|start_header_id|>assistant<|end_header_id|>' + p['content'] + '<|eot_id|>'
                 elif p['role'] == 'system':
-                    with system():
-                        generator = generator + p['content']
-                len_prompt += len(p['content'])
-
+                    all_prompts += '<|start_header_id|>system<|end_header_id|>' + p['content'] + '<|eot_id|>'
+            all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|> '
+            len_prompt = len(all_prompts)
+            generator = generator + all_prompts
         generator = generator + compiled_grammar
         for i, state in enumerate(generator):
             if i == 0:
                 first_state_arr_time = time.time()
         output = str(state)[len_prompt:]
+        # print(output)
         return output, first_state_arr_time, i
     
     def close_model(self):
