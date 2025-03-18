@@ -24,7 +24,7 @@ class BaseModel:
         gen_start_time = time.time()
         output, first_tok_arr_time, gen_length = self._call_engine(prompt,compiled_grammar, stream=True)
         # TTFT (Time to First Token)
-        ttft = first_tok_arr_time - gen_start_time
+        ttft = first_tok_arr_time - compile_start_time
         # print("Output generated")
         gen_end_time = time.time()
         # TGT (Total Generation Time)

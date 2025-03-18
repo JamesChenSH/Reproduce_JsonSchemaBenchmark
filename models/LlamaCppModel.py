@@ -3,6 +3,9 @@ import llama_cpp, time
 import llama_cpp.llama_grammar
 from models.BaseModel import BaseModel
 
+from llama_cpp.llama_grammar import LlamaGrammar
+from typing import Dict, Any
+
 class LlamaCppModel(BaseModel):
     
     def __init__(self):
@@ -19,6 +22,7 @@ class LlamaCppModel(BaseModel):
         return llama_cpp.llama_grammar.LlamaGrammar.from_json_schema(json_schema)
     
     def _call_engine(self, prompts, compiled_grammar, stream=False):
+        segfault_check = self._check_grammar_safety(compiled_grammar)
         if isinstance(prompts, str):
             prompts = [
                 {'role': 'user', 'content': prompts}
@@ -28,6 +32,7 @@ class LlamaCppModel(BaseModel):
             grammar=compiled_grammar, 
             temperature=0.2, 
             stream=stream,
+            logprobs=True,
             max_tokens=512
         )
         if stream:
@@ -50,3 +55,26 @@ class LlamaCppModel(BaseModel):
     def close_model(self):
         self.llama_cpp_model._sampler.close()
         self.llama_cpp_model.close()
+        
+    def _check_grammar_safety(self, grammar: "LlamaGrammar") -> Dict[str, Any]:
+        import signal, os
+        def child_process():
+            from llama_cpp._internals import LlamaSampler
+
+            signal.signal(signal.SIGALRM, lambda _, __: os._exit(2))
+            signal.alarm(15)
+            try:
+                LlamaSampler().add_grammar(self.model._model, grammar)
+                os._exit(0)
+            except Exception:
+                os._exit(1)
+
+        id = os.fork()
+        if id == 0:
+            child_process()
+        else:
+            _, status = os.waitpid(id, 0)
+            if os.WIFEXITED(status):
+                exit_code = os.WEXITSTATUS(status)
+                return {"success": exit_code == 0, "exit_code": exit_code}
+            return {"success": False, "error": "Unknown status"}

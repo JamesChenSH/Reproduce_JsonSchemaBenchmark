@@ -1,4 +1,4 @@
-import os, json, random, torch
+import os, json, random, torch, time
 from argparse import ArgumentParser
 
 os.environ['HF_HOME'] = './cache/'
@@ -12,7 +12,6 @@ from utils.logger import Logger
 import utils.prompts as prompts
 
 from datasets import load_dataset
-from textwrap import dedent
 
 def get_args_parser():
     parser = ArgumentParser()
@@ -23,7 +22,8 @@ def get_args_parser():
     parser.add_argument("--is_cpp", action='store_true', default=False)
     parser.add_argument("--json_shots", action='store_true', default=False)
     parser.add_argument("--verbose", action='store_true', default=False)
-    parser.add_argument("--run_all", action='store_true', default=False, help="Run a systematic test on the given wrapper from n_shot=1 to n_shot=8")
+    parser.add_argument("--n_range", type=int, default=None, help="Run a systematic test on the given wrapper from n_shot=1 to n_shot=n_range")
+    parser.add_argument("--n_exp", type=int, default=3, help="Number of times to run each test")
     return parser
 
 def get_model(args) -> BaseModel:
@@ -157,15 +157,13 @@ def test_Quality(
     gpu_model = torch.cuda.get_device_name()
     cur_wrapper = f"{wrapper} wrapper" if wrapper != 'llm' else "Vanilla LLM"
     
-    logger.log(f"Testing Quality of {cur_wrapper} with {num_shots} shots", force=True) 
-    logger.log(f"GPU: {gpu_model}", force=True)
+    logger.log(f"Testing Quality of {cur_wrapper} with {num_shots} shots", force=True, to_file=True) 
+    logger.log(f"GPU: {gpu_model}", force=True, to_file=True)
     
-    if is_cpp or cur_wrapper == 'llamacpp':
-        logger.log("Backend: LlamaCpp", force=True)
-    else:
-        logger.log("Backend: Transformers", force=True)
+    backend = "LlamaCpp" if is_cpp or wrapper == 'llamacpp' else "Transformers"
+    logger.log(f"Backend: {backend}", force=True, to_file=True)
     if use_json_shots:
-        logger.log("Using JSON Shots", force=True)
+        logger.log("Using JSON Shots", force=True, to_file=True)
     
     # Load test questions and answers
     questions = test_dataset['question']
@@ -199,7 +197,6 @@ def test_Quality(
         n_shots=num_shots, 
         is_json=use_json_shots
     )
-    print(messages)
     
     correct = 0
     incorrects = []
@@ -244,22 +241,13 @@ def test_Quality(
     acc = correct/len(questions)*100
     
     logger.log("Test Complete", force=True)
-    logger.log("Correct: {correct}/{total}, accuracy: {acc}%".format(correct=correct, total=len(questions), acc=acc), force=True)
+    logger.log("Correct: {correct}/{total}, accuracy: {acc}%".format(correct=correct, total=len(questions), acc=acc), force=True, to_file=True)
     
     # Save incorrect answers
     with open(output_file_name, "w") as f:
         json.dump(incorrects, f, indent=4)
         
     return acc
-
-
-
-
-def run_single_test(model, dataset, run_count=3):
-    
-    pass
-    
-
 
 
 
@@ -275,8 +263,6 @@ if __name__ == "__main__":
     model = get_model(args)
     gsm8k = load_dataset('gsm8k', 'main')
     
-    logger = Logger(args.verbose)
-    
     # Get unified n-shot prompt for tests
     example_questions = gsm8k['train']['question']
     raw_answers = gsm8k['train']['answer']
@@ -289,31 +275,55 @@ if __name__ == "__main__":
         example_answers = raw_answers
     
     # Get the number of shots we want to experiment with
-    num_shots = []
-    if args.run_all:
-        num_shots = range(1, 9)
-    else:
-        num_shots = [args.num_shots]
+    # By default, we use the first n samples in train dataset
+    # along with the example questions and answers used in 
+    # Say what you mean rebuttal.
+    num_shots = range(1, args.n_range + 1) if args.n_range is not None else [args.num_shots]
     
-    # Run Test 3 times and get average. Expect time is 3 hours    
-    accs = []
-    for run_count in range(3):    
-        logger.log(f"Run {run_count + 1}", force=True, header="[SYSTEM]")
-        output_file_name = f"quality_{args.wrapper}_{args.num_shots}_{'JSON' if args.json_shots else 'NL'}_shots_run_{run_count + 1}"
-        
-        acc = test_Quality(
-            model=model, 
-            test_dataset=gsm8k['test'][0:4],
-            wrapper=args.wrapper, 
-            num_shots=args.num_shots,
-            example_questions=example_questions,
-            example_answers=example_answers,
-            logger=logger, 
-            output_file_name=output_file_name + ".json",
-            use_json_shots=args.json_shots,
-            is_cpp=args.is_cpp
-        )
-        accs.append(acc)
-    logger.log(f"Average Accuracy: {sum(accs)/len(accs)}", force=True, header="[SYSTEM]")
+    # Manage Output Directory
+    if not os.path.exists('outputs'):
+        os.mkdir('outputs')
+    out_dir = os.path.join('outputs', f"quality_{args.wrapper}")
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    run_time = time.strftime("%Y-%m-%d-%H-%M-%S")
+    run_name = f"quality_{args.wrapper}_{'JSON' if args.json_shots else 'NL'}_shots"
+    if args.n_range is not None:
+        run_name += f"_range_{args.n_range}"
+    run_name += f"_{run_time}"
+    out_dir = os.path.join(out_dir, run_name)
+    if not os.path.exists(out_dir):
+        os.mkdir(out_dir)
+    out_dir += '/'
+    
+    logger = Logger(args.verbose, out_dir + "log.txt")
+    
+    all_accs = []
+    for n in num_shots:
+        # Run Test 3 times and get average. Expect time is 3 hours    
+        accs = []
+        for run_count in range(args.n_exp):    
+            logger.log(f"Run {run_count + 1}", force=True, header="[SYSTEM]", to_file=True)
+            output_file_path = out_dir + f"quality_{args.wrapper}_{n}_{'JSON' if args.json_shots else 'NL'}_shots_run_{run_count + 1}"
+            
+            acc = test_Quality(
+                model=model, 
+                test_dataset=gsm8k['test'],
+                wrapper=args.wrapper, 
+                num_shots=n,
+                example_questions=example_questions,
+                example_answers=example_answers,
+                logger=logger, 
+                output_file_name=output_file_path + ".json",
+                use_json_shots=args.json_shots,
+                is_cpp=args.is_cpp
+            )
+            accs.append(acc)
+        logger.log(f"Average Accuracy: {sum(accs)/len(accs)}", force=True, header="[SYSTEM]", to_file=True)
+        all_accs.append((accs, sum(accs)/len(accs)))
+    
+    logger.log("All Accuracies", force=True, header="[SYSTEM]", to_file=True)
+    for n, accs in zip(num_shots, all_accs):
+        logger.log(f"{n} shots: {accs[0]}, avg: {accs[1]}", force=True, header="[SYSTEM]", to_file=True)
     
     model.close_model()

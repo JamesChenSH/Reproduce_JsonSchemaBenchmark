@@ -68,7 +68,7 @@ if __name__ == "__main__":
     model = get_model(args)
     
     data_path = "../jsonschemabench/data/Github_easy"
-    prompt = 'Generate a json object'
+    prompt_fn = (lambda schema: f"You need to generate a JSON object that matches the schema below.  Do not include the schema in the output and DIRECTLY return the JSON object without any additional information.  The schema is: {json.dumps(schema)}")
     
     files = os.listdir(data_path)
     files.sort()
@@ -108,6 +108,7 @@ if __name__ == "__main__":
         json_schemas.append(schema)
     
         # print(json.loads(schema))
+        prompt = prompt_fn(json.loads(schema))
         try:
             output, gct, ttft, tgt, avg_tkn_t = model.generate_steam(prompt, schema)
             print(output, flush=True)

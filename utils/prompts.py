@@ -12,6 +12,12 @@ EXAMPLE_RESPONSE = [
     """{"reasoning": "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = 74. After eating 35, they had 74 - 35 = 39.","answer": 39"""
 ]
 
+EXAMPLE_NL_RESPONSE = [
+    "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = 6.####6",
+    "There are originally 3 cars. 2 more cars arrive. 3 + 2 = 5.####5",
+    "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = 74. After eating 35, they had 74 - 35 = 39.####39"
+]
+
 EXAMPLE_JSON_STRUCTURE = '{"reasoning":<reasoning about the answer>, "answer": <final answer>}'
 EXAMPLE_NL_STRUCTURE = '<reasoning about the answer>####<final answer>'
 
@@ -35,10 +41,10 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
     n_needed = 0
     if n_shots <= len(EXAMPLE_QUESTION):
         example_question = EXAMPLE_QUESTION[:n_shots]
-        example_answer = EXAMPLE_RESPONSE[:n_shots]
+        example_answer = EXAMPLE_RESPONSE[:n_shots] if is_json else EXAMPLE_NL_RESPONSE[:n_shots]
     else:
         example_question = EXAMPLE_QUESTION
-        example_answer = EXAMPLE_RESPONSE
+        example_answer = EXAMPLE_RESPONSE if is_json else EXAMPLE_NL_RESPONSE
         n_needed = n_shots - len(EXAMPLE_QUESTION)
         
     example_question.extend(example_questions[:n_needed])
