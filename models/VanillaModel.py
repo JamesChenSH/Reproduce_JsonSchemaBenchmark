@@ -9,8 +9,9 @@ class VanillaModel(BaseModel):
         self.tokenizer = None
         if is_cpp:
             self.is_cpp = True
-            self.llm = llama_cpp.Llama(
-                model_path="cache/hub/models--QuantFactory--Meta-Llama-3.1-8B-Instruct-GGUF/snapshots/b6d5cca03f341fd97b7657420bd60e070835b7e5/Meta-Llama-3.1-8B-Instruct.Q6_K.gguf",
+            self.llm = llama_cpp.Llama.from_pretrained(
+                repo_id="QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
+                filename="Meta-Llama-3.1-8B-Instruct.Q6_K.gguf",
                 n_gpu_layers=-1,
                 logits_all=True,
                 n_ctx=2048,

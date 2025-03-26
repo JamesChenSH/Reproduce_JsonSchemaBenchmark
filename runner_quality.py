@@ -266,6 +266,7 @@ if __name__ == "__main__":
     # Get unified n-shot prompt for tests
     example_questions = gsm8k['train']['question']
     raw_answers = gsm8k['train']['answer']
+
     
     if args.json_shots:
         example_answers = []

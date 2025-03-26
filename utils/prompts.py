@@ -7,15 +7,15 @@ EXAMPLE_QUESTION = [
     "Leah had 32 chocolates and her sister had 42. If they ate 35, how many pieces do they have left in total?"
 ]
 EXAMPLE_RESPONSE = [
-    """{"reasoning": "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = 6.", "answer": 6}""",
-    """{"reasoning": "There are originally 3 cars. 2 more cars arrive. 3 + 2 = 5.", "answer": 5}""",
-    """{"reasoning": "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = 74. After eating 35, they had 74 - 35 = 39.","answer": 39"""
+    """{"reasoning": "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = <<21-15=6>>6.", "answer": 6}""",
+    """{"reasoning": "There are originally 3 cars. 2 more cars arrive. 3 + 2 = <<3+2=5>>5.", "answer": 5}""",
+    """{"reasoning": "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = <<32+42=74>>74. After eating 35, they had 74 - 35 = <<74-35=39>>39.","answer": 39"""
 ]
 
 EXAMPLE_NL_RESPONSE = [
-    "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = 6.####6",
-    "There are originally 3 cars. 2 more cars arrive. 3 + 2 = 5.####5",
-    "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = 74. After eating 35, they had 74 - 35 = 39.####39"
+    "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = <<21-15=6>>6.####6",
+    "There are originally 3 cars. 2 more cars arrive. 3 + 2 = <<3+2=5>>5.####5",
+    "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = <<32+42=74>>74. After eating 35, they had 74 - 35 = <<74-35=39>>39.####39"
 ]
 
 EXAMPLE_JSON_STRUCTURE = '{"reasoning":<reasoning about the answer>, "answer": <final answer>}'
@@ -63,6 +63,7 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
         {EXAMPLE_JSON_STRUCTURE if is_json else EXAMPLE_NL_STRUCTURE}
 
         The "reasoning" field will contain your reasoning about the sequence of events, and the "answer" will contain the single letter representing the correct choice you are presented with.
+        All mathematical calculations in the "reasoning" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
         """)
     },]
     
@@ -77,3 +78,27 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
         })
     
     return messages
+
+
+if __name__ == "__main__":
+    '''
+    Print 8 shot examples
+    '''
+    import os
+    os.environ['HF_HOME'] = '../cache/'
+    from datasets import load_dataset
+    
+    gsm8k = load_dataset('gsm8k', 'main')
+    
+    # Get unified n-shot prompt for tests
+    example_questions = gsm8k['train']['question']
+    raw_answers = gsm8k['train']['answer']
+    
+    example_answers = []
+    for answer in raw_answers:
+        example_answers.append(parse_answer(answer))
+        
+    for i in range(8):
+        print(example_questions[i])
+        print(example_answers[i])
+        print()
