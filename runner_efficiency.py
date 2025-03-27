@@ -67,7 +67,7 @@ if __name__ == "__main__":
     
     model = get_model(args)
     
-    data_path = "../jsonschemabench/data/Github_easy"
+    data_path = "./data/Github_easy"
     prompt_fn = (lambda schema: f"You need to generate a JSON object that matches the schema below.  Do not include the schema in the output and DIRECTLY return the JSON object without any additional information.  The schema is: {json.dumps(schema)}")
     
     files = os.listdir(data_path)

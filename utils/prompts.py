@@ -57,13 +57,14 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
         "content": dedent(f"""
         You are an expert in solving grade school math tasks. You will be presented with a grade-school math word problem and be asked to solve it.
         Before answering you should reason about the problem (using the "reasoning" field in the JSON response described below).
+        
+        All mathematical calculations in the "reasoning" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
             
         You will always repond{" with JSON" if is_json else ""} in the format described below:
         
         {EXAMPLE_JSON_STRUCTURE if is_json else EXAMPLE_NL_STRUCTURE}
-
+        
         The "reasoning" field will contain your reasoning about the sequence of events, and the "answer" will contain the single letter representing the correct choice you are presented with.
-        All mathematical calculations in the "reasoning" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
         """)
     },]
     

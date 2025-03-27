@@ -298,6 +298,8 @@ if __name__ == "__main__":
     out_dir += '/'
     
     logger = Logger(args.verbose, out_dir + "log.txt")
+    logger.log("Quality Test", force=True, header="[SYSTEM]", to_file=True)
+    logger.log(f"Model: {args.model}", force=True, header="[SYSTEM]", to_file=True)
     
     all_accs = []
     for n in num_shots:
