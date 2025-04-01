@@ -1,6 +1,7 @@
 import guidance, time, torch, json
+
 import llama_cpp
-from guidance import models, system, assistant, user
+from guidance import models, gen
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -24,7 +25,7 @@ class GuidanceModel(BaseModel):
                 verbose=False,
                 seed=19181111
             )     
-            self.guidance_model = models.llama_cpp.LlamaCpp(self.llm)
+            self.guidance_model = models.LlamaCpp(self.llm)
         else:
             # transformer method
             print(f"Loading model {llm_name}")
@@ -60,22 +61,25 @@ class GuidanceModel(BaseModel):
                     all_prompts += '<|start_header_id|>assistant<|end_header_id|>' + p['content'] + '<|eot_id|>'
                 elif p['role'] == 'system':
                     all_prompts += '<|start_header_id|>system<|end_header_id|>' + p['content'] + '<|eot_id|>'
-            all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|> '
-            raw_input = all_prompts
+            if prompt[-1]['role'] != 'assistant':
+                all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|>'
             len_prompt = len(all_prompts)
+            all_prompts = all_prompts
+            raw_input = all_prompts + '<think>'
             
             # DeepSeek-R1 Support -- Only constrain after thinking
             if "DeepSeek-R1" in self.llm_name:
-                think_generator = generator + all_prompts
+                think_gen = generator + all_prompts + gen(stop='</think>')
                 # Generate until </think> token
-                for i, state in enumerate(think_generator):
-                    print(str(state), end='')
-                    if '</think>' in str(state):
-                        break
-                generator = generator + str(state)
-                print()
+                for i, state in enumerate(think_gen):
+                    pass
+                generator = generator + (str(state) + "</think>")
+            else:
+                # If not DeepSeek-R1, we just generate the whole prompt
+                generator = generator + all_prompts
+
         # Add grammar
-        generator = generator + compiled_grammar  # TODO: Let the model to generate until </think>, then add the json grammar.
+        generator = generator + compiled_grammar 
         for i, state in enumerate(generator):
             if i == 0:
                 first_state_arr_time = time.time()

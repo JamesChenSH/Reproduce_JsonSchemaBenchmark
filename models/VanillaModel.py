@@ -40,15 +40,18 @@ class VanillaModel(BaseModel):
     def _call_engine(self, prompts, compiled_grammar):
         if self.is_cpp:
             # LlamaCpp Model
+            # raw_input = self.llm.apply_chat_template(prompts)
+            raw_input = str(prompts)
+
             generator = self.llm.create_chat_completion(
                 prompts,  
                 temperature=0.2, 
                 stream=True,
-                max_tokens=512
+                max_tokens=2048
             )
             output = ""
             for i, content in enumerate(generator):
-                if i == self.llama_cpp_model.n_ctx:
+                if i == self.llm.n_ctx:
                     break
                 if i == 0:
                     first_tok_arr_time = time.time()
@@ -57,10 +60,10 @@ class VanillaModel(BaseModel):
                 except KeyError as e:
                     token = ''
                 output += token
-            return prompts, output, first_tok_arr_time, i
+            return raw_input, output, first_tok_arr_time, i
         else:
             output = self.llm(prompts, max_length=512)[0]['generated_text'][-1]['content']
-            return prompts, output, None, len(output)
+            return raw_input, output, None, len(output)
         
     def close_model(self):
         if self.is_cpp:

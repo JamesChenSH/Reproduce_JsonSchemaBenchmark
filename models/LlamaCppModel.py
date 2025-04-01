@@ -35,7 +35,7 @@ class LlamaCppModel(BaseModel):
             temperature=0.2, 
             stream=True,
             logprobs=True,
-            max_tokens=512
+            max_tokens=2048
         )
         output = ""
         for i, content in enumerate(generator):

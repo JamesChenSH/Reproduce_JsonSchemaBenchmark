@@ -229,6 +229,7 @@ def test_Quality(
                 "correct": False
             })
             messages.pop()
+            messages.pop()
             continue
         
         question_log = {
@@ -248,6 +249,7 @@ def test_Quality(
         else:
             logger.log(f"Question {i}: {msg}")
         # Restore the messages
+        messages.pop()
         messages.pop()
 
         all_logs.append(question_log)

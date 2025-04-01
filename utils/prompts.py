@@ -59,6 +59,7 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
         Before answering you should reason about the problem (using the "explanation" field in the JSON response described below).
         
         All mathematical calculations in the "explanation" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
+        All thinkings should be less than 300 words
             
         You will always repond{" with JSON" if is_json else ""} in the format described below:
         
