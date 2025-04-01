@@ -1,5 +1,6 @@
 import os, json, random, torch, time
 from argparse import ArgumentParser
+from tqdm import tqdm
 
 # os.environ['HF_HOME'] = './cache/'
 # os.environ['HF_DATASETS_OFFLINE'] = '1'
@@ -19,12 +20,15 @@ def get_args_parser():
     parser.add_argument("--wrapper", type=str, default='guidance')
     parser.add_argument("--length", type=int, default=100000)
     parser.add_argument("--n_shots", type=int, default=8)
-    parser.add_argument("--n_question", type=int, default=1000)
+    parser.add_argument("--n_question", type=int, default=10000)
     parser.add_argument("--is_cpp", action='store_true', default=False)
     parser.add_argument("--json_shots", action='store_true', default=False)
-    parser.add_argument("--verbose", action='store_true', default=False)
     parser.add_argument("--n_range", type=int, default=None, help="Run a systematic test on the given wrapper from n_shot=1 to n_shot=n_range")
     parser.add_argument("--n_exp", type=int, default=3, help="Number of times to run each test")
+
+    # Display options
+    parser.add_argument("--verbose", action='store_true', default=False)
+    parser.add_argument("--tqdm", action='store_true', default=False, help="Use tqdm to show progress bar")
     return parser
 
 def get_model(args) -> BaseModel:
@@ -59,7 +63,7 @@ def get_model(args) -> BaseModel:
     if wrapper_name == 'llamacpp':
         from models.LlamaCppModel import LlamaCppModel
         assert not model, "Multiple models specified"
-        model = LlamaCppModel()
+        model = LlamaCppModel(llm_name)
 
     if not model:
         raise Exception("No grammar model specified")
@@ -199,7 +203,11 @@ def test_Quality(
     correct = 0
     all_logs = []
 
-    for i, (question, answer) in enumerate(zip(questions, answers)):
+    if args.tqdm:
+        iterator = tqdm(enumerate(zip(questions, answers)), total=len(questions))
+    else:
+        iterator = enumerate(zip(questions, answers))
+    for i, (question, answer) in iterator:
         answer = int(answer.split('####')[1].replace(",", "").strip())
         # We can use regex to find free generation results
         # answer_regex = r'"answer":[ ]?([1-9][0-9]{0,9})'

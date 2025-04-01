@@ -44,6 +44,7 @@ class GuidanceModel(BaseModel):
     def _call_engine(self, prompt, compiled_grammar):
         len_prompt = 0
         generator = self.guidance_model.stream()
+        first_state_arr_time = None
         if isinstance(prompt, str):
             generator = generator + prompt
             len_prompt = len(prompt)
@@ -64,14 +65,16 @@ class GuidanceModel(BaseModel):
             if prompt[-1]['role'] != 'assistant':
                 all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|>'
             len_prompt = len(all_prompts)
-            all_prompts = all_prompts
-            raw_input = all_prompts + '<think>'
+            raw_input = all_prompts
             
             # DeepSeek-R1 Support -- Only constrain after thinking
-            if "DeepSeek-R1" in self.llm_name:
+            if "DeepSeek-R1" in self.llm_name and '</think>' not in all_prompts:
+                all_prompts = all_prompts + "<think>"
                 think_gen = generator + all_prompts + gen(stop='</think>')
                 # Generate until </think> token
                 for i, state in enumerate(think_gen):
+                    if i == 0:
+                        first_state_arr_time = time.time()
                     pass
                 generator = generator + (str(state) + "</think>")
             else:
@@ -81,7 +84,7 @@ class GuidanceModel(BaseModel):
         # Add grammar
         generator = generator + compiled_grammar 
         for i, state in enumerate(generator):
-            if i == 0:
+            if i == 0 and not first_state_arr_time:
                 first_state_arr_time = time.time()
         output = str(state)[len_prompt:]
         # print(output)

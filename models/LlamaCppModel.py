@@ -19,29 +19,51 @@ class LlamaCppModel(BaseModel):
             verbose=False,
             seed=19181111
         )
-    
+
+
     def compile_grammar(self, json_schema):
         return llama_cpp.llama_grammar.LlamaGrammar.from_json_schema(json_schema)
-    
+
+
     def _call_engine(self, prompts, compiled_grammar):
         segfault_check = self._check_grammar_safety(compiled_grammar)
+        first_tok_arr_time = None
         if isinstance(prompts, str):
             prompts = [
                 {'role': 'user', 'content': prompts}
             ]
-        generator = self.llama_cpp_model.create_chat_completion(
-            prompts, 
-            grammar=compiled_grammar, 
-            temperature=0.2, 
-            stream=True,
-            logprobs=True,
-            max_tokens=2048
-        )
+
         output = ""
+        if "DeepSeek-R1" in self.llm_name:
+            # Let it generate thinking process first
+            think_generator = self.llm.create_chat_completion(
+                prompts, 
+                temperature=0.2, 
+                stream=True,
+                logprobs=True,
+                max_tokens=2048,
+                stop=['</think>'],
+            )        
+            for i, content in enumerate(think_generator):
+                if i == 0:
+                    first_tok_arr_time = time.time()
+                try:
+                    token = content['choices'][0]['delta']['content']
+                except KeyError as e:
+                    token = ''
+                output += token
+            output += '</think>'
+
+        generator = self.llm.create_chat_completion(
+                prompts, 
+                grammar=compiled_grammar, 
+                temperature=0.2, 
+                stream=True,
+                logprobs=True,
+                max_tokens=512,
+            )
         for i, content in enumerate(generator):
-            if i == self.llama_cpp_model.n_ctx:
-                break
-            if i == 0:
+            if i == 0 and not first_tok_arr_time:
                 first_tok_arr_time = time.time()
             try:
                 token = content['choices'][0]['delta']['content']
@@ -50,10 +72,12 @@ class LlamaCppModel(BaseModel):
             output += token
         return prompts, output, first_tok_arr_time, i
     
+
     def close_model(self):
-        self.llama_cpp_model._sampler.close()
-        self.llama_cpp_model.close()
-        
+        self.llm._sampler.close()
+        self.llm.close()
+
+
     def _check_grammar_safety(self, grammar: "LlamaGrammar") -> Dict[str, Any]:
         import signal, os
         def child_process():
