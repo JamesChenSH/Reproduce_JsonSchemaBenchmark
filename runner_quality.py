@@ -210,10 +210,16 @@ def test_Quality(
                 "role": "user",
                 "content": """Question: {question}, """.format(question=question)
             })
+        messages.append(
+            {
+                "role": "assistant",
+                "content": ""
+            })
         # Run LLM here
         try: 
             # If run Vanilla LLM model, although we are passing the output_schema, it is not used
-            output, _ = model.generate_all(messages, output_schema)
+            output, _ = model.generate(messages, output_schema)
+            break
         except Exception as e:
             logger.log(f"Question {i}: Generation Error: {e}")
             incorrects.append({
@@ -225,7 +231,6 @@ def test_Quality(
             })
             messages.pop()
             continue
-        
         success, error_json, msg = validate_answer(question, output, answer,use_json_shots)
         if success:
             correct += 1
@@ -234,7 +239,6 @@ def test_Quality(
             incorrects.append(error_json)
         # Restore the messages
         messages.pop()
-        
         if i % 100 == 0:
             logger.log(f"Question {i} completed", force=True)
         

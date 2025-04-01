@@ -33,7 +33,7 @@ def parse_answer(answer:str):
     return json.dumps(ans)
     
 
-def create_prompt_template(example_questions=None, example_answers=None, n_shots=3, is_json=False):
+def create_prompt_template(example_questions=None, example_answers=None, n_shots=3, is_json=False, is_deepseek=False):
     '''
     Create the chat template prompt with 3 given example questions and responses.
     Then add the user's question to the prompt.
@@ -53,18 +53,18 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
     assert len(example_question) == n_shots
         
     messages = [{
-        "role": "system",
+        "role": "user" if is_deepseek else "system",
         "content": dedent(f"""
         You are an expert in solving grade school math tasks. You will be presented with a grade-school math word problem and be asked to solve it.
-        Before answering you should reason about the problem (using the "reasoning" field in the JSON response described below).
+        Before answering you should reason about the problem (using the "explanation" field in the JSON response described below).
         
-        All mathematical calculations in the "reasoning" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
+        All mathematical calculations in the "explanation" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
             
         You will always repond{" with JSON" if is_json else ""} in the format described below:
         
         {EXAMPLE_JSON_STRUCTURE if is_json else EXAMPLE_NL_STRUCTURE}
         
-        The "reasoning" field will contain your reasoning about the sequence of events, and the "answer" will contain the single letter representing the correct choice you are presented with.
+        The "explanation" field will contain your explanation about the sequence of events, and the "answer" field will contain the single number representing the correct answer you are presented with.
         """)
     },]
     

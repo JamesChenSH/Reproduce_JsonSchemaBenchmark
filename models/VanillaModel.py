@@ -9,9 +9,10 @@ class VanillaModel(BaseModel):
         self.tokenizer = None
         if is_cpp:
             self.is_cpp = True
+            self.llm_name, self.file_name = llm_name.split('//')
             self.llm = llama_cpp.Llama.from_pretrained(
-                repo_id="QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
-                filename="Meta-Llama-3.1-8B-Instruct.Q6_K.gguf",
+                repo_id=self.llm_name,
+                filename=self.file_name,
                 n_gpu_layers=-1,
                 logits_all=True,
                 n_ctx=2048,
@@ -36,16 +37,24 @@ class VanillaModel(BaseModel):
     def compile_grammar(self, json_schema=None):
         return None
     
-    def _call_engine(self, prompts, compiled_grammar, stream=False):
+    def _call_engine(self, prompts, compiled_grammar):
         if self.is_cpp:
             # LlamaCpp Model
             generator = self.llm.create_chat_completion(
                 prompts,  
                 temperature=0.2, 
-                stream=stream,
+                stream=True,
                 max_tokens=512
             )
-            output =  generator["choices"][0]["message"]["content"]
+            output = ""
+            for state in generator:
+                delta = state["choices"][0]["delta"]
+                if 'role' in delta:
+                    output += f"{delta['role']}"
+                elif 'content' in delta:
+                    tokens = delta['content'].split()
+                    for token in tokens:
+                        output += f"{token} "
             return output, None, len(output)
         else:
             output = self.llm(prompts, max_length=512)[0]['generated_text'][-1]['content']

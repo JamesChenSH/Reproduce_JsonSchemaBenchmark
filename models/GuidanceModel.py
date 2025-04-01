@@ -40,7 +40,7 @@ class GuidanceModel(BaseModel):
         return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=0.6, max_tokens=512)
     
     
-    def _call_engine(self, prompt, compiled_grammar, stream=False):
+    def _call_engine(self, prompt, compiled_grammar):
         len_prompt = 0
         generator = self.guidance_model.stream()
         if isinstance(prompt, str):
@@ -54,15 +54,27 @@ class GuidanceModel(BaseModel):
                 if 'DeepSeek-R1' in self.llm_name and p['role']=='system':
                     p['role'] = 'user'
                 if p['role'] == 'user':
+                    # TODO: Double check is deepseek distilled llama using the same tokens as llama 
                     all_prompts += '<|start_header_id|>user<|end_header_id|>' + p['content'] + '<|eot_id|>'
                 elif p['role'] == 'assistant':
                     all_prompts += '<|start_header_id|>assistant<|end_header_id|>' + p['content'] + '<|eot_id|>'
                 elif p['role'] == 'system':
                     all_prompts += '<|start_header_id|>system<|end_header_id|>' + p['content'] + '<|eot_id|>'
-            all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|> '
+            all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|>'
             len_prompt = len(all_prompts)
-            generator = generator + all_prompts
-        generator = generator + compiled_grammar
+            
+            # DeepSeek-R1 Support -- Only constrain after thinking
+            if "DeepSeek-R1" in self.llm_name:
+                think_generator = generator + all_prompts
+                # Generate until </think> token
+                for i, state in enumerate(think_generator):
+                    print(str(state), end='')
+                    if '</think>' in str(state):
+                        break
+                generator = generator + str(state)
+                print()
+        # Add grammar
+        generator = generator + compiled_grammar  # TODO: Let the model to generate until </think>, then add the json grammar.
         for i, state in enumerate(generator):
             if i == 0:
                 first_state_arr_time = time.time()

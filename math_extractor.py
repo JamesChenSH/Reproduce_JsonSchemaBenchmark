@@ -58,13 +58,13 @@ if __name__ == "__main__":
     for inc in total_incorrect:
         table.append(inc)
         
-    with open(f"{out_path}/invalid_math.txt", 'w') as f:
+    with open(f"{out_path}/incorrect_maths.txt", 'w') as f:
         f.write("Question<split>Equation<split>Generated Result\n")
         for inc in total_incorrect:
             f.write(f"{inc[0]}<split>{inc[1]}<split>{inc[2]}\n")
     print(tabulate(table, headers=["Question", "Equation", "Generated Result"], maxcolwidths=[25, None, None], tablefmt="grid"))
     
-    dump_file_name = f"{out_path}/invalid_math.json"
+    dump_file_name = f"{out_path}/invalid_maths.json"
     with open(dump_file_name, 'w') as f:
         json.dump(no_valid_equation, f, indent=4)
     

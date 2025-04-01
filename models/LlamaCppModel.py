@@ -21,7 +21,7 @@ class LlamaCppModel(BaseModel):
     def compile_grammar(self, json_schema):
         return llama_cpp.llama_grammar.LlamaGrammar.from_json_schema(json_schema)
     
-    def _call_engine(self, prompts, compiled_grammar, stream=False):
+    def _call_engine(self, prompts, compiled_grammar):
         segfault_check = self._check_grammar_safety(compiled_grammar)
         if isinstance(prompts, str):
             prompts = [
@@ -31,26 +31,22 @@ class LlamaCppModel(BaseModel):
             prompts, 
             grammar=compiled_grammar, 
             temperature=0.2, 
-            stream=stream,
+            stream=True,
             logprobs=True,
             max_tokens=512
         )
-        if stream:
-            output = ""
-            for i, content in enumerate(generator):
-                if i == self.llama_cpp_model.n_ctx:
-                    break
-                if i == 0:
-                    first_tok_arr_time = time.time()
-                try:
-                    token = content['choices'][0]['delta']['content']
-                except KeyError as e:
-                    token = ''
-                output += token
-            return output, first_tok_arr_time, i
-        else:
-            output = generator['choices'][0]['message']['content']
-            return output, None, len(output)
+        output = ""
+        for i, content in enumerate(generator):
+            if i == self.llama_cpp_model.n_ctx:
+                break
+            if i == 0:
+                first_tok_arr_time = time.time()
+            try:
+                token = content['choices'][0]['delta']['content']
+            except KeyError as e:
+                token = ''
+            output += token
+        return output, first_tok_arr_time, i
     
     def close_model(self):
         self.llama_cpp_model._sampler.close()

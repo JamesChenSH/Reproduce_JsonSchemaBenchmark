@@ -1,6 +1,9 @@
 import time
 # import stopit
 class BaseModel:
+    
+    is_deepseek: bool
+    
     # @stopit.threading_timeoutable(timeout=40)
     def compile_grammar(self, json_schema):
         status = "unknown"
@@ -13,7 +16,7 @@ class BaseModel:
             status = "schema_not_supported"
         return compiled_grammar, status
     
-    def generate_steam(self, prompt, json_schema=None):
+    def generate(self, prompt, json_schema=None):
         compile_start_time = time.time()
         compiled_grammar = self.compile_grammar(json_schema)
         compile_end_time = time.time()
@@ -22,7 +25,7 @@ class BaseModel:
         
         # print("Generating output")
         gen_start_time = time.time()
-        output, first_tok_arr_time, gen_length = self._call_engine(prompt,compiled_grammar, stream=True)
+        output, first_tok_arr_time, gen_length = self._call_engine(prompt,compiled_grammar)
         # TTFT (Time to First Token)
         ttft = first_tok_arr_time - compile_start_time
         # print("Output generated")
@@ -32,11 +35,6 @@ class BaseModel:
         avg_token_gen_time = tgt/gen_length
         
         return output, gct, ttft, tgt, avg_token_gen_time
-    
-    def generate_all(self, prompts, json_schema=None):
-        compiled_grammar = self.compile_grammar(json_schema)
-        output, first_tok_arr_time, gen_length = self._call_engine(prompts,compiled_grammar)
-        return output, gen_length
     
     def _call_engine(self, prompt, compiled_grammar):
         raise NotImplementedError

@@ -35,7 +35,7 @@ class OutlinesModel(BaseModel):
     def compile_grammar(self, json_schema):
         return outlines.generate.json(self.model, schema_object=json_schema)
     
-    def _call_engine(self, prompt, compiled_grammar, stream=False):
+    def _call_engine(self, prompt, compiled_grammar):
         generator = compiled_grammar.stream(prompts = prompt)
         output = ""
         for i, token in enumerate(generator):

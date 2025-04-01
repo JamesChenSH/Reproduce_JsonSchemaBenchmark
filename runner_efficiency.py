@@ -110,7 +110,7 @@ if __name__ == "__main__":
         # print(json.loads(schema))
         prompt = prompt_fn(json.loads(schema))
         try:
-            output, gct, ttft, tgt, avg_tkn_t = model.generate_steam(prompt, schema)
+            output, gct, ttft, tgt, avg_tkn_t = model.generate(prompt, schema)
             print(output, flush=True)
             
             validate_enhanaced(json.loads(output), json.loads(schema))
