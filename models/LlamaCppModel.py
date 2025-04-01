@@ -8,10 +8,12 @@ from typing import Dict, Any
 
 class LlamaCppModel(BaseModel):
     
-    def __init__(self):
+    def __init__(self, llm_name):
         super().__init__()
-        self.llama_cpp_model = llama_cpp.Llama(
-            model_path='cache/hub/models--QuantFactory--Meta-Llama-3.1-8B-Instruct-GGUF/snapshots/b6d5cca03f341fd97b7657420bd60e070835b7e5/Meta-Llama-3.1-8B-Instruct.Q6_K.gguf',
+        self.llm_name, self.file_name = llm_name.split('//')
+        self.llm = llama_cpp.Llama.from_pretrained(
+            repo_id=self.llm_name,
+            filename=self.file_name,
             n_gpu_layers=-1,
             n_ctx=2048,
             verbose=False,
@@ -21,7 +23,7 @@ class LlamaCppModel(BaseModel):
     def compile_grammar(self, json_schema):
         return llama_cpp.llama_grammar.LlamaGrammar.from_json_schema(json_schema)
     
-    def _call_engine(self, prompts, compiled_grammar, stream=False):
+    def _call_engine(self, prompts, compiled_grammar):
         segfault_check = self._check_grammar_safety(compiled_grammar)
         if isinstance(prompts, str):
             prompts = [
@@ -31,26 +33,22 @@ class LlamaCppModel(BaseModel):
             prompts, 
             grammar=compiled_grammar, 
             temperature=0.2, 
-            stream=stream,
+            stream=True,
             logprobs=True,
             max_tokens=512
         )
-        if stream:
-            output = ""
-            for i, content in enumerate(generator):
-                if i == self.llama_cpp_model.n_ctx:
-                    break
-                if i == 0:
-                    first_tok_arr_time = time.time()
-                try:
-                    token = content['choices'][0]['delta']['content']
-                except KeyError as e:
-                    token = ''
-                output += token
-            return output, first_tok_arr_time, i
-        else:
-            output = generator['choices'][0]['message']['content']
-            return output, None, len(output)
+        output = ""
+        for i, content in enumerate(generator):
+            if i == self.llama_cpp_model.n_ctx:
+                break
+            if i == 0:
+                first_tok_arr_time = time.time()
+            try:
+                token = content['choices'][0]['delta']['content']
+            except KeyError as e:
+                token = ''
+            output += token
+        return prompts, output, first_tok_arr_time, i
     
     def close_model(self):
         self.llama_cpp_model._sampler.close()

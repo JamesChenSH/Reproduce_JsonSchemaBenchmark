@@ -35,8 +35,8 @@ class BaseModel:
     
     def generate_all(self, prompts, json_schema=None):
         compiled_grammar = self.compile_grammar(json_schema)
-        output, first_tok_arr_time, gen_length = self._call_engine(prompts,compiled_grammar)
-        return output, gen_length
+        raw_input, output, first_tok_arr_time, gen_length = self._call_engine(prompts,compiled_grammar)
+        return raw_input, output, gen_length
     
     def _call_engine(self, prompt, compiled_grammar):
         raise NotImplementedError

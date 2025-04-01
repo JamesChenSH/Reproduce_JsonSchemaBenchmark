@@ -40,7 +40,7 @@ class GuidanceModel(BaseModel):
         return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=0.6, max_tokens=512)
     
     
-    def _call_engine(self, prompt, compiled_grammar, stream=False):
+    def _call_engine(self, prompt, compiled_grammar):
         len_prompt = 0
         generator = self.guidance_model.stream()
         if isinstance(prompt, str):
@@ -60,6 +60,7 @@ class GuidanceModel(BaseModel):
                 elif p['role'] == 'system':
                     all_prompts += '<|start_header_id|>system<|end_header_id|>' + p['content'] + '<|eot_id|>'
             all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|> '
+            raw_input = all_prompts
             len_prompt = len(all_prompts)
             generator = generator + all_prompts
         generator = generator + compiled_grammar
@@ -68,7 +69,7 @@ class GuidanceModel(BaseModel):
                 first_state_arr_time = time.time()
         output = str(state)[len_prompt:]
         # print(output)
-        return output, first_state_arr_time, i
+        return raw_input, output, first_state_arr_time, i
     
     def close_model(self):
         if self.is_cpp:

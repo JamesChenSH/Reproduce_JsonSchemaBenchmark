@@ -1,5 +1,5 @@
 from models.BaseModel import BaseModel
-import llama_cpp, torch
+import llama_cpp, torch, time
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 class VanillaModel(BaseModel):
@@ -9,9 +9,10 @@ class VanillaModel(BaseModel):
         self.tokenizer = None
         if is_cpp:
             self.is_cpp = True
+            self.llm_name, self.file_name = llm_name.split('//')
             self.llm = llama_cpp.Llama.from_pretrained(
-                repo_id="QuantFactory/Meta-Llama-3.1-8B-Instruct-GGUF",
-                filename="Meta-Llama-3.1-8B-Instruct.Q6_K.gguf",
+                repo_id=self.llm_name,
+                filename=self.file_name,
                 n_gpu_layers=-1,
                 logits_all=True,
                 n_ctx=2048,
@@ -36,20 +37,30 @@ class VanillaModel(BaseModel):
     def compile_grammar(self, json_schema=None):
         return None
     
-    def _call_engine(self, prompts, compiled_grammar, stream=False):
+    def _call_engine(self, prompts, compiled_grammar):
         if self.is_cpp:
             # LlamaCpp Model
             generator = self.llm.create_chat_completion(
                 prompts,  
                 temperature=0.2, 
-                stream=stream,
+                stream=True,
                 max_tokens=512
             )
-            output =  generator["choices"][0]["message"]["content"]
-            return output, None, len(output)
+            output = ""
+            for i, content in enumerate(generator):
+                if i == self.llama_cpp_model.n_ctx:
+                    break
+                if i == 0:
+                    first_tok_arr_time = time.time()
+                try:
+                    token = content['choices'][0]['delta']['content']
+                except KeyError as e:
+                    token = ''
+                output += token
+            return prompts, output, first_tok_arr_time, i
         else:
             output = self.llm(prompts, max_length=512)[0]['generated_text'][-1]['content']
-            return output, None, len(output)
+            return prompts, output, None, len(output)
         
     def close_model(self):
         if self.is_cpp:
