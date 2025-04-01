@@ -8,10 +8,12 @@ from typing import Dict, Any
 
 class LlamaCppModel(BaseModel):
     
-    def __init__(self):
+    def __init__(self, llm_name):
         super().__init__()
-        self.llama_cpp_model = llama_cpp.Llama(
-            model_path='cache/hub/models--QuantFactory--Meta-Llama-3.1-8B-Instruct-GGUF/snapshots/b6d5cca03f341fd97b7657420bd60e070835b7e5/Meta-Llama-3.1-8B-Instruct.Q6_K.gguf',
+        self.llm_name, self.file_name = llm_name.split('//')
+        self.llm = llama_cpp.Llama.from_pretrained(
+            repo_id=self.llm_name,
+            filename=self.file_name,
             n_gpu_layers=-1,
             n_ctx=2048,
             verbose=False,
@@ -46,7 +48,7 @@ class LlamaCppModel(BaseModel):
             except KeyError as e:
                 token = ''
             output += token
-        return output, first_tok_arr_time, i
+        return prompts, output, first_tok_arr_time, i
     
     def close_model(self):
         self.llama_cpp_model._sampler.close()

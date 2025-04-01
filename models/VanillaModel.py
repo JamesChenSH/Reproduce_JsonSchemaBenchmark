@@ -1,5 +1,5 @@
 from models.BaseModel import BaseModel
-import llama_cpp, torch
+import llama_cpp, torch, time
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
 class VanillaModel(BaseModel):
@@ -47,18 +47,20 @@ class VanillaModel(BaseModel):
                 max_tokens=512
             )
             output = ""
-            for state in generator:
-                delta = state["choices"][0]["delta"]
-                if 'role' in delta:
-                    output += f"{delta['role']}"
-                elif 'content' in delta:
-                    tokens = delta['content'].split()
-                    for token in tokens:
-                        output += f"{token} "
-            return output, None, len(output)
+            for i, content in enumerate(generator):
+                if i == self.llama_cpp_model.n_ctx:
+                    break
+                if i == 0:
+                    first_tok_arr_time = time.time()
+                try:
+                    token = content['choices'][0]['delta']['content']
+                except KeyError as e:
+                    token = ''
+                output += token
+            return prompts, output, first_tok_arr_time, i
         else:
             output = self.llm(prompts, max_length=512)[0]['generated_text'][-1]['content']
-            return output, None, len(output)
+            return prompts, output, None, len(output)
         
     def close_model(self):
         if self.is_cpp:

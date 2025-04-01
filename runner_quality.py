@@ -1,7 +1,7 @@
 import os, json, random, torch, time
 from argparse import ArgumentParser
 
-os.environ['HF_HOME'] = './cache/'
+# os.environ['HF_HOME'] = './cache/'
 # os.environ['HF_DATASETS_OFFLINE'] = '1'
 # os.environ['HF_HUB_OFFLINE'] = '1'
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
@@ -18,7 +18,8 @@ def get_args_parser():
     parser.add_argument("--model", type=str, default='unsloth/Meta-Llama-3.1-8B-Instruct')
     parser.add_argument("--wrapper", type=str, default='guidance')
     parser.add_argument("--length", type=int, default=100000)
-    parser.add_argument("--num_shots", type=int, default=8)
+    parser.add_argument("--n_shots", type=int, default=8)
+    parser.add_argument("--n_question", type=int, default=1000)
     parser.add_argument("--is_cpp", action='store_true', default=False)
     parser.add_argument("--json_shots", action='store_true', default=False)
     parser.add_argument("--verbose", action='store_true', default=False)
@@ -66,7 +67,7 @@ def get_model(args) -> BaseModel:
     return model
 
 
-def validate_answer(question, output, answer, is_json=False) -> tuple:
+def validate_answer(question, output: str, answer:int, is_json=False) -> tuple[bool, dict, str]:
     '''
     Validate the output against the answer. 
     If is_json is True, the output is expected to be a JSON string.
@@ -74,33 +75,33 @@ def validate_answer(question, output, answer, is_json=False) -> tuple:
     Returns a tuple of (is_correct, error_message)
     if is_correct is True, error_message is None.
     '''
+    na_reasoning = "N/A"
     if is_json:
         # The case we expect output to generate JSON outputs
         # Check validity
         try:
+            # Skip thinking process that may occur in DeepSeek model
+            if "</think>" in output:
+                output = output[output.find("</think>") + len("</think>"):]
             output = json.loads(output)
         except json.JSONDecodeError:
             error_msg = 'Failed to parse output'
-            error_json = {
-                "question": question, 
-                "reasoning": "Failed to parse output",
-                "generated_answer": output, 
-                "correct_answer": answer
+            parsed_json = {
+                "reasoning": na_reasoning,
+                "generated_answer": output,
             }
-            return False, error_json, error_msg
+            return False, parsed_json, error_msg
         # Check json structure
         try:
             assert 'reasoning' in output
             assert 'answer' in output
         except AssertionError:
             error_msg = 'Generated JSON does not fit schema'
-            error_json = {
-                "question": question, 
-                "reasoning": "Generated JSON does not fit schema",
-                "generated_answer": json.dumps(output), 
-                "correct_answer": answer
+            parsed_json = {
+                "reasoning": na_reasoning,
+                "generated_answer": json.dumps(output)
             }
-            return False, error_json, error_msg
+            return False, parsed_json, error_msg
         # Get reasoning and answer    
         reasoning = output['reasoning']
         gen_answer = output['answer']
@@ -113,28 +114,24 @@ def validate_answer(question, output, answer, is_json=False) -> tuple:
             gen_answer = int(gen_answer.replace(",", "").strip())
         except ValueError:
             error_msg = 'Failed to parse output from NL'
-            error_json = {
-                "question": question, 
-                "reasoning": "Failed to parse output",
-                "generated_answer": output, 
-                "correct_answer": answer
+            parsed_json = {
+                "reasoning": na_reasoning,
+                "generated_answer": output
             }
-            return False, error_json, error_msg
+            return False, parsed_json, error_msg
         
     # If we can get the answer, we can compare it
+    parsed_json = {
+        "reasoning": reasoning,
+        "generated_answer": gen_answer
+    }
     if gen_answer == answer:
         # When it is correct
-        return True, None, ""
+        return True, parsed_json, ""
     else:
         # When it is incorrect
         error_msg = f"Incorrect: Generated {gen_answer} instead of {answer}"
-        error_json = {
-            "question": question, 
-            "reasoning": reasoning,
-            "generated_answer": gen_answer, 
-            "correct_answer": answer
-        }
-        return False, error_json, error_msg
+        return False, parsed_json, error_msg
 
 
 def test_Quality(
@@ -142,6 +139,7 @@ def test_Quality(
     test_dataset,
     wrapper: str, 
     num_shots: int, 
+    num_questions: int,
     example_questions: list,
     example_answers: list,
     logger: Logger, 
@@ -166,8 +164,8 @@ def test_Quality(
         logger.log("Using JSON Shots", force=True, to_file=True)
     
     # Load test questions and answers
-    questions = test_dataset['question']
-    answers = test_dataset['answer']
+    questions = test_dataset['question'][:num_questions]
+    answers = test_dataset['answer'][:num_questions]
     
     # Defines the schema for output   
     output_schema = {
@@ -199,8 +197,8 @@ def test_Quality(
     )
     
     correct = 0
-    incorrects = []
-    
+    all_logs = []
+
     for i, (question, answer) in enumerate(zip(questions, answers)):
         answer = int(answer.split('####')[1].replace(",", "").strip())
         # We can use regex to find free generation results
@@ -218,29 +216,43 @@ def test_Quality(
         # Run LLM here
         try: 
             # If run Vanilla LLM model, although we are passing the output_schema, it is not used
-            output, _ = model.generate(messages, output_schema)
-            break
+            raw_input, output, _ = model.generate_all(messages, output_schema)
         except Exception as e:
             logger.log(f"Question {i}: Generation Error: {e}")
-            incorrects.append({
+            all_logs.append({
                 "question": question, 
-                "reasoning": "Error During Generation",
-                "generated_answer": "N/A",
-                "error_message": str(e), 
-                "correct_answer": answer
+                "full_prompt": raw_input,
+                "correct_answer": answer,
+                "generated_raw": "N/A",
+                "parsed_json": "N/A",
+                "error_message": "Error During Generation",
+                "correct": False
             })
             messages.pop()
             continue
-        success, error_json, msg = validate_answer(question, output, answer,use_json_shots)
-        if success:
+        
+        question_log = {
+            "question": question, 
+            "full_prompt": raw_input,
+            "correct_answer": answer,
+            "generated_raw": output,
+        }
+
+        is_correct, parsed_json, msg = validate_answer(question, output, answer, use_json_shots)
+        question_log["parsed_json"] = parsed_json
+        question_log["error_message"] = msg
+        question_log["correct"] = is_correct
+
+        if is_correct:
             correct += 1
         else:
             logger.log(f"Question {i}: {msg}")
-            incorrects.append(error_json)
         # Restore the messages
         messages.pop()
-        if i % 100 == 0:
-            logger.log(f"Question {i} completed", force=True)
+
+        all_logs.append(question_log)
+        # if i % 100 == 0:
+            # logger.log(f"Question {i} completed", force=True)
         
     acc = correct/len(questions)*100
     
@@ -249,7 +261,7 @@ def test_Quality(
     
     # Save incorrect answers
     with open(output_file_name, "w") as f:
-        json.dump(incorrects, f, indent=4)
+        json.dump(all_logs, f, indent=4)
         
     return acc
 
@@ -264,8 +276,15 @@ if __name__ == "__main__":
     parser = get_args_parser()
     args = parser.parse_args()
     
+    print("Getting model...")
     model = get_model(args)
+    print("Model loaded")
+
+    # Load the dataset
+    print("Loading dataset...")
     gsm8k = load_dataset('gsm8k', 'main')
+    print("Dataset loaded")
+    
     
     # Get unified n-shot prompt for tests
     example_questions = gsm8k['train']['question']
@@ -283,7 +302,7 @@ if __name__ == "__main__":
     # By default, we use the first n samples in train dataset
     # along with the example questions and answers used in 
     # Say what you mean rebuttal.
-    num_shots = range(1, args.n_range + 1) if args.n_range is not None else [args.num_shots]
+    num_shots = range(1, args.n_range + 1) if args.n_range is not None else [args.n_shots]
     
     # Manage Output Directory
     if not os.path.exists('outputs'):
@@ -318,6 +337,7 @@ if __name__ == "__main__":
                 test_dataset=gsm8k['test'],
                 wrapper=args.wrapper, 
                 num_shots=n,
+                num_questions=args.n_question,
                 example_questions=example_questions,
                 example_answers=example_answers,
                 logger=logger, 

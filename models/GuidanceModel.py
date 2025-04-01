@@ -60,7 +60,8 @@ class GuidanceModel(BaseModel):
                     all_prompts += '<|start_header_id|>assistant<|end_header_id|>' + p['content'] + '<|eot_id|>'
                 elif p['role'] == 'system':
                     all_prompts += '<|start_header_id|>system<|end_header_id|>' + p['content'] + '<|eot_id|>'
-            all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|>'
+            all_prompts = all_prompts + '<|start_header_id|>assistant<|end_header_id|> '
+            raw_input = all_prompts
             len_prompt = len(all_prompts)
             
             # DeepSeek-R1 Support -- Only constrain after thinking
@@ -80,7 +81,7 @@ class GuidanceModel(BaseModel):
                 first_state_arr_time = time.time()
         output = str(state)[len_prompt:]
         # print(output)
-        return output, first_state_arr_time, i
+        return raw_input, output, first_state_arr_time, i
     
     def close_model(self):
         if self.is_cpp:

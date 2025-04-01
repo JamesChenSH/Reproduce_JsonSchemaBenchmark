@@ -36,6 +36,11 @@ class BaseModel:
         
         return output, gct, ttft, tgt, avg_token_gen_time
     
+    def generate_all(self, prompts, json_schema=None):
+        compiled_grammar = self.compile_grammar(json_schema)
+        raw_input, output, first_tok_arr_time, gen_length = self._call_engine(prompts,compiled_grammar)
+        return raw_input, output, gen_length
+    
     def _call_engine(self, prompt, compiled_grammar):
         raise NotImplementedError
     
