@@ -51,8 +51,6 @@ class VanillaModel(BaseModel):
             )
             output = ""
             for i, content in enumerate(generator):
-                if i == self.llm.n_ctx:
-                    break
                 if i == 0:
                     first_tok_arr_time = time.time()
                 try:

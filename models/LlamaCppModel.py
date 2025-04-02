@@ -62,15 +62,15 @@ class LlamaCppModel(BaseModel):
                 logprobs=True,
                 max_tokens=512,
             )
-        for i, content in enumerate(generator):
-            if i == 0 and not first_tok_arr_time:
+        for j, content in enumerate(generator):
+            if j == 0 and not first_tok_arr_time:
                 first_tok_arr_time = time.time()
             try:
                 token = content['choices'][0]['delta']['content']
             except KeyError as e:
                 token = ''
             output += token
-        return prompts, output, first_tok_arr_time, i
+        return prompts, output, first_tok_arr_time, len(output)
     
 
     def close_model(self):

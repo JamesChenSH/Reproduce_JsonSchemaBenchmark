@@ -14,6 +14,27 @@ import utils.prompts as prompts
 
 from datasets import load_dataset
 
+OUTPUT_SCHEMA = {
+        "properties": {
+            "reasoning": {
+                "title": "Reasoning", 
+                "type": "string"
+            }, 
+            "answer": {
+                "title": "Answer", 
+                "type": "integer"
+            }
+        }, 
+        "required": [
+            "reasoning", 
+            "answer"
+        ], 
+        "title": "ReturnedModel", 
+        "type": "object"
+    }
+
+OUTPUT_SCHEMA = json.dumps(OUTPUT_SCHEMA)
+
 def get_args_parser():
     parser = ArgumentParser()
     parser.add_argument("--model", type=str, default='unsloth/Meta-Llama-3.1-8B-Instruct')
@@ -171,28 +192,6 @@ def test_Quality(
     questions = test_dataset['question'][:num_questions]
     answers = test_dataset['answer'][:num_questions]
     
-    # Defines the schema for output   
-    output_schema = {
-        "properties": {
-            "reasoning": {
-                "title": "Reasoning", 
-                "type": "string"
-            }, 
-            "answer": {
-                "title": "Answer", 
-                "type": "integer"
-            }
-        }, 
-        "required": [
-            "reasoning", 
-            "answer"
-        ], 
-        "title": "ReturnedModel", 
-        "type": "object"
-    }
-
-    output_schema = json.dumps(output_schema)
-    
     messages = prompts.create_prompt_template(
         example_questions=example_questions, 
         example_answers=example_answers, 
@@ -224,7 +223,7 @@ def test_Quality(
         # Run LLM here
         try: 
             # If run Vanilla LLM model, although we are passing the output_schema, it is not used
-            raw_input, output, _ = model.generate_all(messages, output_schema)
+            raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA)
         except Exception as e:
             logger.log(f"Question {i}: Generation Error: {e}")
             all_logs.append({

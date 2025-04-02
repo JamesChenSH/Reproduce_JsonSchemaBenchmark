@@ -1,7 +1,7 @@
 import guidance, time, torch, json
 
 import llama_cpp
-from guidance import models, gen
+from guidance import models, gen, user, system, assistant
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
@@ -25,7 +25,7 @@ class GuidanceModel(BaseModel):
                 n_ctx=2048,
                 verbose=False,
                 seed=19181111
-            )     
+            )    
             self.guidance_model = models.LlamaCpp(self.llm)
         else:
             # transformer method
@@ -47,62 +47,57 @@ class GuidanceModel(BaseModel):
         generator = self.guidance_model.stream()
         first_state_arr_time = None
 
-        bos = '<|begin_of_text|>'
-        eos = '<|eot_id|>'
-        boh = '<|start_header_id|>'
-        eoh = '<|end_header_id|>'
-
         if isinstance(prompt, str):
-            generator = generator + prompt
+            with user():
+                generator = generator + prompt
             len_prompt = len(prompt)
         else:
-            all_prompts = ''
+            len_prompt = 0
             for i, p in enumerate(prompt):
-                if i == 0:
-                    all_prompts = all_prompts + bos
                 if 'DeepSeek-R1' in self.llm_name and p['role']=='system':
                     p['role'] = 'user'
+
                 if p['role'] == 'user':
-                    all_prompts += (boh + 'user' + eoh + p['content'] + eos)
+                    with user():
+                        generator = generator + p['content']
+                    len_prompt += len(p['content'])
                 elif p['role'] == 'assistant':
-                    if i == len(prompt) - 1:
-                        len_prompt = len(all_prompts + boh + 'assistant' + eoh)
-                    all_prompts += (boh + 'assistant' + eoh + p['content'])
-                    if i != len(prompt) - 1:
-                        all_prompts += eos
+                    with assistant():
+                        generator = generator + p['content']
+                    len_prompt += len(p['content'])
                 elif p['role'] == 'system':
-                    all_prompts += (boh + 'system' + eoh + p['content'] + eos)
-
-            if prompt[-1]['role'] != 'assistant':
-                all_prompts = all_prompts + (boh + 'assistant' + eoh)
-                len_prompt = len(all_prompts)
-
-            raw_input = all_prompts
+                    with system():
+                        generator = generator + p['content']
+                    len_prompt += len(p['content'])
             
-            # DeepSeek-R1 Support -- Only constrain after thinking
-            start_of_think = "<think>"
-            end_of_think = "</think>"
-            if "DeepSeek-R1" in self.llm_name and end_of_think not in all_prompts:
-                if start_of_think not in all_prompts:
-                    all_prompts = all_prompts + start_of_think
-                think_gen = generator + all_prompts + gen(stop=end_of_think)
-                # Generate until </think> token
-                for i, state in enumerate(think_gen):
-                    if i == 0:
-                        first_state_arr_time = time.time()
-                    pass
-                generator = generator + (str(state) + end_of_think)
-            else:
-                # If not DeepSeek-R1, we just generate the whole prompt
-                generator = generator + all_prompts
+            if "DeepSeek-R1" in self.llm_name:
+                # If DeepSeek-R1, we need to generate the thinking process first
+                # DeepSeek-R1 Support -- Only constrain after thinking
+                start_of_think = "<think>"
+                end_of_think = "</think>"
+                with assistant():
+                    think_gen = generator + start_of_think + gen(stop=end_of_think)            
+                    for i, state in enumerate(think_gen):
+                        if i == 0:
+                            first_state_arr_time = time.time()
+                    thoughts = str(state)[len_prompt:] + end_of_think
+                    
+                    generator = generator + thoughts + compiled_grammar 
+                    for j, state in enumerate(generator):
+                        if j == 0 and not first_state_arr_time:
+                            first_state_arr_time = time.time()
+                output = str(state)[len_prompt:]
+                raw_input = str(state)[:len_prompt]
+                return raw_input, output, first_state_arr_time, len(output)
 
         # Add grammar
-        generator = generator + compiled_grammar 
-        for j, state in enumerate(generator):
-            if j == 0 and not first_state_arr_time:
-                first_state_arr_time = time.time()
-        output = str(state)[len_prompt:]
-        # print(output)
+        with assistant():
+            generator = generator + compiled_grammar 
+            for j, state in enumerate(generator):
+                if j == 0 and not first_state_arr_time:
+                    first_state_arr_time = time.time()
+            output = str(state)[len_prompt:]
+        raw_input = str(state)[:len_prompt]
         return raw_input, output, first_state_arr_time, len(output)
     
     def close_model(self):
