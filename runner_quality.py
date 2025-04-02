@@ -258,6 +258,11 @@ def test_Quality(
             "error_message": msg,
             "correct": is_correct
         }
+        # Save logs
+        with open(output_file_name, "a") as f:
+            json.dump(question_log, f, indent=4)
+            if i != len(questions) - 1:
+                f.write(",\n")
 
         if is_correct:
             correct += 1
@@ -267,11 +272,6 @@ def test_Quality(
         messages.pop()
         messages.pop()
 
-        # Save logs
-        with open(output_file_name, "a") as f:
-            json.dump(question_log, f, indent=4)
-            if i != len(questions) - 1:
-                f.write(",\n")
 
         if isinstance(iterator, tqdm):
             iterator.set_description(f"Correct: {correct}/{i+1}")

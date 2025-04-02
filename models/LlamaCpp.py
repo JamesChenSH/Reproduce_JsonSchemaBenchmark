@@ -26,13 +26,13 @@ class LlamaCppModel(BaseModel):
 
 
     def _call_engine(self, prompts, compiled_grammar):
-        segfault_check = self._check_grammar_safety(compiled_grammar)
+        # segfault_check = self._check_grammar_safety(compiled_grammar)
         first_tok_arr_time = None
         if isinstance(prompts, str):
             prompts = [
                 {'role': 'user', 'content': prompts}
             ]
-
+        raw_input = str(prompts)
         output = ""
         if "DeepSeek-R1" in self.llm_name:
             # Let it generate thinking process first
@@ -70,7 +70,7 @@ class LlamaCppModel(BaseModel):
             except KeyError as e:
                 token = ''
             output += token
-        return prompts, output, first_tok_arr_time, len(output)
+        return raw_input, output, first_tok_arr_time, len(output)
     
 
     def close_model(self):
