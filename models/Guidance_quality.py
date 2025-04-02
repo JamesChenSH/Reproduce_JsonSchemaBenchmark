@@ -90,7 +90,6 @@ class GuidanceModel(BaseModel):
                 think_gen = self.guidance_model + all_prompts + gen(stop=end_of_think)
                 # Generate until </think> token
                 state = str(think_gen) + end_of_think
-                print(state)
                 generator = self.guidance_model + state
             else:
                 # If not DeepSeek-R1, we just generate the whole prompt

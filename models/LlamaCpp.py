@@ -75,6 +75,8 @@ class LlamaCppModel(BaseModel):
             except KeyError as e:
                 token = ''
             output += token
+        
+        prompts.pop()
         return raw_input, output, first_tok_arr_time, len(output)
     
 
