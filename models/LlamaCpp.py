@@ -53,6 +53,11 @@ class LlamaCppModel(BaseModel):
                     token = ''
                 output += token
             output += '</think>'
+            
+        prompts.append({
+            'role': 'assistant', 
+            'content': output
+        })
 
         generator = self.llm.create_chat_completion(
                 prompts, 
