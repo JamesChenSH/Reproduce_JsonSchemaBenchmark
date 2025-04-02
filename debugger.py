@@ -51,7 +51,7 @@ def add_args():
     parser = ArgumentParser()
     parser.add_argument("--input_json", type=str, default=None, help="Path to the input json containing few-shot examples")
     parser.add_argument("--json_shots", action='store_true', help="Use json format for few-shot examples")
-    parser.add_argument("--n_shots", type=int, default=3, help="how many examples to use for few-shot learning")
+    parser.add_argument("--n_shots", type=int, default=0, help="how many examples to use for few-shot learning")
     parser.add_argument("--model", type=str, default='unsloth/Meta-Llama-3.1-8B-Instruct')
     parser.add_argument("--wrapper", type=str, default='guidance')
     parser.add_argument("--is_cpp", action='store_true', help="Use llama_cpp backend")
@@ -74,7 +74,7 @@ def run_debugger(args, example_questions, example_answers):
     
 
     outputs = pretty_print_messages(messages)
-    with open('debug_log.txt', 'a') as f:
+    with open('debug_log.txt', 'w') as f:
         f.write(outputs)
 
     # get user input
@@ -107,7 +107,6 @@ def run_debugger(args, example_questions, example_answers):
             f.write(f"Assistant:\n {output_str}\n")
         
         # print the output
-        print("=" * 50)
         print("Assistant: ")
         print(output)
         # check if the output is acceptable

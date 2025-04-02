@@ -66,23 +66,23 @@ def get_model(args) -> BaseModel:
     llm_name = args.model
     
     if wrapper_name == 'llm':
-        from models.VanillaModel import VanillaModel
+        from models.Vanilla import VanillaModel
         assert not model, "Multiple models specified"
         model = VanillaModel(llm_name, args.is_cpp)
     
     if wrapper_name == 'guidance':
-        from models.GuidanceModel import GuidanceModel
+        from models.Guidance import GuidanceModel
         # llama cpp method
         assert not model, "Multiple models specified"
         model = GuidanceModel(llm_name, args.is_cpp)
 
     if wrapper_name == 'outlines':
-        from models.OutlinesModel import OutlinesModel
+        from models.Outlines import OutlinesModel
         assert not model, "Multiple models specified"
         model = OutlinesModel()
 
     if wrapper_name == 'llamacpp':
-        from models.LlamaCppModel import LlamaCppModel
+        from models.LlamaCpp import LlamaCppModel
         assert not model, "Multiple models specified"
         model = LlamaCppModel(llm_name)
 
