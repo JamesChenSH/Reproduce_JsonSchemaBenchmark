@@ -1,6 +1,14 @@
 import os, sys, json
 
-def aggregate_gsm8k_incorrect(jsons: list[str])->dict:
+def aggregate_gsm8k_incorrect(output_dir)->dict:
+    
+    all_jsons = []
+    for file in os.listdir(output_dir):
+        if '.json' in file and 'all_incorrects' not in file:
+            with open(os.path.join(output_dir, file), 'r') as f:
+                jsons = json.load(f)
+                all_jsons.extend(jsons)
+
     all_incorrect = {}
     for question in jsons:
         # print(question)
@@ -18,18 +26,51 @@ def aggregate_gsm8k_incorrect(jsons: list[str])->dict:
         # all_incorrect[question['question']]['mathematical_errors'].append(all_math_errs)
     return all_incorrect
 
-def find_mathematical_errors(reasoning: str)->list[tuple[str, int, int]]:
-    '''
-    Find all equations in the list, then find all mathematical errors in the equations.
-    Return a list of tuples of the form (equation, correct_ans, incorrect_ans)
-    '''
-    all_math_errs = []
+
+def try_fix_incorrect_parse(fp)-> None:
+    new_json = []
+    cant_fix = 0
+    with open(fp, 'r') as f:
+        jsons = json.load(f)
+    for question in jsons:
+        if question['correct'] is True:
+            new_json.append(question)
+            continue
+        if question['parsed_json']['reasoning'] != 'N/A':
+            new_json.append(question)
+            continue
+        try:
+            generated_ans = question['parsed_json']['generated_answer']
+            generated_ans = generated_ans.replace("\\", "").strip()
+            first_bracket = generated_ans.find('{')
+            if first_bracket == -1:
+                # No json in output at all, which is just bad
+                cant_fix += 1
+                new_json.append(question)
+                continue
+            parsed_json = json.loads(generated_ans[first_bracket:])
+            question['parsed_json'] = {
+                "reasoning": parsed_json['reasoning'],
+                "generated_answer": parsed_json['answer']
+            }
+            question['correct'] = parsed_json['answer'] == question['correct_answer']
+            if not question['correct']:
+                question['error_message'] = f"Incorrect: Generated {parsed_json['answer']} instead of {question['correct_answer']}"
+            else:
+                question['error_message'] = ''
+        except json.JSONDecodeError as e:
+            # Still incorrect
+            cant_fix += 1
+        new_json.append(question)
+    # Save the modified jsons back to the file
+    with open(fp, 'w') as f:
+        json.dump(jsons, f, indent=4)
+    print("There are {} questions that cannot be fixed.".format(cant_fix))
     
-    pass 
 
 
 def parse_one_dir(dir: str):
-    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(dir, exist_ok=True)
     all_jsons = []
     for file in os.listdir(dir):
         if '.json' in file and 'all_incorrects' not in file:
@@ -49,17 +90,13 @@ if __name__ == "__main__":
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_llm/quality_llm_JSON_shots_range_8_2025-03-16-15-48-16"
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_llm/quality_llm_NL_shots_range_8_2025-03-17-13-18-10"
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-14-03-26_with_llama"
-    output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-15-33-27"
-    os.makedirs(output_dir, exist_ok=True)
+    # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-15-33-27"
+    # os.makedirs(output_dir, exist_ok=True)
     
-    all_jsons = []
-    for file in os.listdir(output_dir):
-        if '.json' in file and 'all_incorrects' not in file:
-            with open(os.path.join(output_dir, file), 'r') as f:
-                jsons = json.load(f)
-                all_jsons.extend(jsons)
-                
-    all_incorrect = aggregate_gsm8k_incorrect(all_jsons)
-    with open(os.path.join(output_dir, "all_incorrects.json"), 'w') as f:
-        json.dump(all_incorrect, f, indent=4)
-    print("Aggregated all incorrect answers and reasoning into a single JSON file. There is a total of {} incorrect questions.".format(len(all_incorrect)))
+
+    # all_incorrect = aggregate_gsm8k_incorrect(output_dir)
+    # with open(os.path.join(output_dir, "all_incorrects.json"), 'w') as f:
+    #     json.dump(all_incorrect, f, indent=4)
+    # print("Aggregated all incorrect answers and reasoning into a single JSON file. There is a total of {} incorrect questions.".format(len(all_incorrect)))
+
+    try_fix_incorrect_parse('./quality_llm+guidance_8_JSON_shots_run_1.json')

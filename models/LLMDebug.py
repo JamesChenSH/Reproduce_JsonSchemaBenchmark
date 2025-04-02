@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from models.BaseModel import BaseModel
 
 
-class GuidanceModel(BaseModel):
+class VanillaModel(BaseModel):
     
     def __init__(self, llm_name, is_cpp=False):
         super().__init__()  
@@ -39,7 +39,7 @@ class GuidanceModel(BaseModel):
         
     
     def compile_grammar(self, json_schema):
-        return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=0.6, max_tokens=512)
+        return None
     
     
     def _call_engine(self, prompt, compiled_grammar):
@@ -55,7 +55,7 @@ class GuidanceModel(BaseModel):
         eos = '' if "DeepSeek" in self.llm_name else '<|eot_id|>'
 
         if isinstance(prompt, str):
-            generator = self.guidance_model + prompt
+            all_prompts = hdr.format(role='user') + prompt + eos
             len_prompt = len(prompt)
         else:
             all_prompts = ''
@@ -69,6 +69,7 @@ class GuidanceModel(BaseModel):
                 elif p['role'] == 'assistant':
                     if i == len(prompt) - 1:
                         len_prompt = len(all_prompts + hdr.format(role='assistant'))
+
                     all_prompts += (hdr.format(role='assistant') + p['content'])
                     if i != len(prompt) - 1:
                         all_prompts += eos
@@ -86,16 +87,8 @@ class GuidanceModel(BaseModel):
             if "DeepSeek-R1" in self.llm_name and end_of_think not in all_prompts:
                 if start_of_think not in all_prompts:
                     all_prompts = all_prompts + start_of_think
-                think_gen = self.guidance_model + all_prompts + gen(stop=end_of_think)
-                # Generate until </think> token
-                state = str(think_gen) + end_of_think + '\n\n'
-                generator = self.guidance_model + state
-            else:
-                # If not DeepSeek-R1, we just generate the whole prompt
-                generator = self.guidance_model + all_prompts
-
-        # Add grammar
-        generator = generator + compiled_grammar 
+        
+        generator = self.guidance_model + all_prompts + gen()
         output = str(generator)[len_prompt:]
         # print(output)
         return raw_input, output, first_state_arr_time, len(output)
