@@ -44,7 +44,6 @@ class GuidanceModel(BaseModel):
     
     def _call_engine(self, prompt, compiled_grammar):
         len_prompt = 0
-        generator = self.guidance_model.stream()
         first_state_arr_time = None
         
         # begin and end of overall context
@@ -56,7 +55,7 @@ class GuidanceModel(BaseModel):
         eos = '' if "DeepSeek" in self.llm_name else '<|eot_id|>'
 
         if isinstance(prompt, str):
-            generator = generator + prompt
+            generator = self.guidance_model + prompt
             len_prompt = len(prompt)
         else:
             all_prompts = ''
@@ -88,24 +87,18 @@ class GuidanceModel(BaseModel):
             if "DeepSeek-R1" in self.llm_name and end_of_think not in all_prompts:
                 if start_of_think not in all_prompts:
                     all_prompts = all_prompts + start_of_think
-                think_gen = generator + all_prompts + gen(stop=end_of_think)
+                think_gen = self.guidance_model + all_prompts + gen(stop=end_of_think)
                 # Generate until </think> token
-                for i, state in enumerate(think_gen):
-                    if i == 0:
-                        first_state_arr_time = time.time()
-                    pass
-                del think_gen
-                generator = generator + (str(state) + end_of_think)
+                state = str(think_gen) + end_of_think
+                print(state)
+                generator = self.guidance_model + state
             else:
                 # If not DeepSeek-R1, we just generate the whole prompt
-                generator = generator + all_prompts
+                generator = self.guidance_model + all_prompts
 
         # Add grammar
         generator = generator + compiled_grammar 
-        for j, state in enumerate(generator):
-            if j == 0 and not first_state_arr_time:
-                first_state_arr_time = time.time()
-        output = str(state)[len_prompt:]
+        output = str(generator)[len_prompt:]
         # print(output)
         return raw_input, output, first_state_arr_time, len(output)
     

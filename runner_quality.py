@@ -71,7 +71,7 @@ def get_model(args) -> BaseModel:
         model = VanillaModel(llm_name, args.is_cpp)
     
     if wrapper_name == 'guidance':
-        from models.Guidance import GuidanceModel
+        from models.Guidance_quality import GuidanceModel
         # llama cpp method
         assert not model, "Multiple models specified"
         model = GuidanceModel(llm_name, args.is_cpp)
