@@ -200,7 +200,9 @@ def test_Quality(
     )
     
     correct = 0
-    all_logs = []
+    
+    with open(output_file_name, "w") as f:
+        f.write("[")
 
     if args.tqdm:
         iterator = tqdm(enumerate(zip(questions, answers)), total=len(questions))
@@ -226,7 +228,7 @@ def test_Quality(
             raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA)
         except Exception as e:
             logger.log(f"Question {i}: Generation Error: {e}")
-            all_logs.append({
+            question_log = {
                 "question": question, 
                 "full_prompt": raw_input,
                 "correct_answer": answer,
@@ -234,22 +236,28 @@ def test_Quality(
                 "parsed_json": "N/A",
                 "error_message": "Error During Generation",
                 "correct": False
-            })
+            }
+            # Save logs
+            with open(output_file_name, "a") as f:
+                json.dump(question_log, f, indent=4)
+                if i != len(questions) - 1:
+                    f.write(",\n")
+
             messages.pop()
             messages.pop()
             continue
-        
+
+        is_correct, parsed_json, msg = validate_answer(question, output, answer, use_json_shots)
+
         question_log = {
             "question": question, 
             "full_prompt": raw_input,
             "correct_answer": answer,
             "generated_raw": output,
+            "parsed_json": parsed_json,
+            "error_message": msg,
+            "correct": is_correct
         }
-
-        is_correct, parsed_json, msg = validate_answer(question, output, answer, use_json_shots)
-        question_log["parsed_json"] = parsed_json
-        question_log["error_message"] = msg
-        question_log["correct"] = is_correct
 
         if is_correct:
             correct += 1
@@ -259,7 +267,14 @@ def test_Quality(
         messages.pop()
         messages.pop()
 
-        all_logs.append(question_log)
+        # Save logs
+        with open(output_file_name, "a") as f:
+            json.dump(question_log, f, indent=4)
+            if i != len(questions) - 1:
+                f.write(",\n")
+
+        if isinstance(iterator, tqdm):
+            iterator.set_description(f"Correct: {correct}/{i+1}")
         # if i % 100 == 0:
             # logger.log(f"Question {i} completed", force=True)
         
@@ -269,8 +284,9 @@ def test_Quality(
     logger.log("Correct: {correct}/{total}, accuracy: {acc}%".format(correct=correct, total=len(questions), acc=acc), force=True, to_file=True)
     
     # Save incorrect answers
-    with open(output_file_name, "w") as f:
-        json.dump(all_logs, f, indent=4)
+    with open(output_file_name, "a") as f:
+        f.write("\n]")
+    logger.log("All logs saved to " + output_file_name, force=True, to_file=True)
         
     return acc
 

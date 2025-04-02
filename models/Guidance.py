@@ -24,7 +24,7 @@ class GuidanceModel(BaseModel):
                 logits_all=True,
                 n_ctx=2048,
                 verbose=False,
-                seed=19181111
+                seed=19181111,
             )     
             self.guidance_model = models.LlamaCpp(self.llm)
         else:
@@ -46,11 +46,14 @@ class GuidanceModel(BaseModel):
         len_prompt = 0
         generator = self.guidance_model.stream()
         first_state_arr_time = None
+        
+        # begin and end of overall context
+        bot = '<｜begin▁of▁sentence｜>' if "DeepSeek" in self.llm_name else '<|begin_of_text|>'
+        eot = '<｜end▁of▁sentence｜>' if "DeepSeek" in self.llm_name else '<|end_of_text|>'
 
-        bos = '<|begin_of_text|>'
-        eos = '<|eot_id|>'
-        boh = '<|start_header_id|>'
-        eoh = '<|end_header_id|>'
+        # begin and end of each role
+        hdr = '<｜{role}｜>' if "DeepSeek" in self.llm_name else '<|start_header_id|>{role}<|end_header_id|>'
+        eos = '' if "DeepSeek" in self.llm_name else '<|eot_id|>'
 
         if isinstance(prompt, str):
             generator = generator + prompt
@@ -59,22 +62,22 @@ class GuidanceModel(BaseModel):
             all_prompts = ''
             for i, p in enumerate(prompt):
                 if i == 0:
-                    all_prompts = all_prompts + bos
+                    all_prompts = all_prompts + bot
                 if 'DeepSeek-R1' in self.llm_name and p['role']=='system':
                     p['role'] = 'user'
                 if p['role'] == 'user':
-                    all_prompts += (boh + 'user' + eoh + p['content'] + eos)
+                    all_prompts += (hdr.format(role='user') + p['content'] + eos)
                 elif p['role'] == 'assistant':
                     if i == len(prompt) - 1:
-                        len_prompt = len(all_prompts + boh + 'assistant' + eoh)
-                    all_prompts += (boh + 'assistant' + eoh + p['content'])
+                        len_prompt = len(all_prompts + hdr.format(role='assistant'))
+                    all_prompts += (hdr.format(role='assistant') + p['content'])
                     if i != len(prompt) - 1:
                         all_prompts += eos
                 elif p['role'] == 'system':
-                    all_prompts += (boh + 'system' + eoh + p['content'] + eos)
+                    all_prompts += (hdr.format(role='system') + p['content'] + eos)
 
             if prompt[-1]['role'] != 'assistant':
-                all_prompts = all_prompts + (boh + 'assistant' + eoh)
+                all_prompts = all_prompts + (hdr.format(role='assistant'))
                 len_prompt = len(all_prompts)
 
             raw_input = all_prompts
@@ -91,6 +94,7 @@ class GuidanceModel(BaseModel):
                     if i == 0:
                         first_state_arr_time = time.time()
                     pass
+                del think_gen
                 generator = generator + (str(state) + end_of_think)
             else:
                 # If not DeepSeek-R1, we just generate the whole prompt
@@ -103,6 +107,7 @@ class GuidanceModel(BaseModel):
                 first_state_arr_time = time.time()
         output = str(state)[len_prompt:]
         # print(output)
+        del generator
         return raw_input, output, first_state_arr_time, len(output)
     
     def close_model(self):
