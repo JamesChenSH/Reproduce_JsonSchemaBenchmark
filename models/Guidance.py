@@ -22,7 +22,7 @@ class GuidanceModel(BaseModel):
                 filename=self.file_name,
                 n_gpu_layers=-1,
                 logits_all=True,
-                n_ctx=2048,
+                n_ctx=2048+512,
                 verbose=False,
                 seed=19181111,
             )     
@@ -88,7 +88,7 @@ class GuidanceModel(BaseModel):
             if "DeepSeek-R1" in self.llm_name and end_of_think not in all_prompts:
                 if start_of_think not in all_prompts:
                     all_prompts = all_prompts + start_of_think
-                think_gen = generator + all_prompts + gen(temperature=temperature, stop=end_of_think)
+                think_gen = generator + all_prompts + gen(temperature=temperature, stop=end_of_think, max_tokens=2048)
                 # Generate until </think> token
                 for i, state in enumerate(think_gen):
                     if i == 0:

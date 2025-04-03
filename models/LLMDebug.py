@@ -22,7 +22,7 @@ class VanillaModel(BaseModel):
                 filename=self.file_name,
                 n_gpu_layers=-1,
                 logits_all=True,
-                n_ctx=2048,
+                n_ctx=2048+512,
                 verbose=False,
                 seed=19181111,
             )     

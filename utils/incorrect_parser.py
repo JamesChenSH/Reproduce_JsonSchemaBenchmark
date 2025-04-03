@@ -1,17 +1,13 @@
 import os, sys, json
 
-def aggregate_gsm8k_incorrect(output_dir)->dict:
-    
-    all_jsons = []
-    for file in os.listdir(output_dir):
-        if '.json' in file and 'all_incorrects' not in file:
-            with open(os.path.join(output_dir, file), 'r') as f:
-                jsons = json.load(f)
-                all_jsons.extend(jsons)
+def aggregate_gsm8k_incorrect(jsons)->dict:
 
     all_incorrect = {}
     for question in jsons:
         # print(question)
+        if question['correct'] is True:
+            # Ignore correct answers
+            continue
         if question['question'] not in all_incorrect:
             all_incorrect[question['question']] = {
                 "question": question['question'],
@@ -20,8 +16,15 @@ def aggregate_gsm8k_incorrect(output_dir)->dict:
                 "incorrect_answers": [],
                 # "mathematical_errors": []
             }
-        all_incorrect[question['question']]['incorrect_answers'].append(question['generated_answer'])
-        all_incorrect[question['question']]['reasonings'].append(question['reasoning'])
+        parsed_json = question['parsed_json']
+        if parsed_json == 'N/A':
+            reasoning = 'No Valid LLM Generation'
+            generated_answer = 'N/A'
+        else:
+            reasoning = parsed_json['reasoning']
+            generated_answer = parsed_json['generated_answer']
+        all_incorrect[question['question']]['incorrect_answers'].append(generated_answer)
+        all_incorrect[question['question']]['reasonings'].append(reasoning)
         # all_math_errs = find_mathematical_errors(question['reasoning'])
         # all_incorrect[question['question']]['mathematical_errors'].append(all_math_errs)
     return all_incorrect
@@ -34,11 +37,19 @@ def try_fix_incorrect_parse(fp)-> None:
         jsons = json.load(f)
     for question in jsons:
         if question['correct'] is True:
+            # Ignore correct answers
+            new_json.append(question)
+            continue
+        if question['parsed_json'] == 'N/A':
+            # Skip questions without valid LLM generation
+            cant_fix += 1
             new_json.append(question)
             continue
         if question['parsed_json']['reasoning'] != 'N/A':
+            # Ignore questions that is confirmed incorrect answer
             new_json.append(question)
             continue
+
         try:
             generated_ans = question['parsed_json']['generated_answer']
             generated_ans = generated_ans.replace("\\", "").strip()
@@ -91,12 +102,8 @@ if __name__ == "__main__":
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_llm/quality_llm_NL_shots_range_8_2025-03-17-13-18-10"
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-14-03-26_with_llama"
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-15-33-27"
-    # os.makedirs(output_dir, exist_ok=True)
-    
 
-    # all_incorrect = aggregate_gsm8k_incorrect(output_dir)
-    # with open(os.path.join(output_dir, "all_incorrects.json"), 'w') as f:
-    #     json.dump(all_incorrect, f, indent=4)
-    # print("Aggregated all incorrect answers and reasoning into a single JSON file. There is a total of {} incorrect questions.".format(len(all_incorrect)))
+    output_dir = "/mnt/d/3_research/Constraint Decoding/Reproduce_JsonSchemaBenchmark/outputs/quality_llm+guidance/quality_llm+guidance_JSON_shots_2025-04-02-17-46-32"
+    parse_one_dir(output_dir)
 
-    try_fix_incorrect_parse('./quality_llm+guidance_8_JSON_shots_run_1.json')
+    # try_fix_incorrect_parse('./quality_llm+guidance_8_JSON_shots_run_1.json')

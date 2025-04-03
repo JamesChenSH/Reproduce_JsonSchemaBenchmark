@@ -15,7 +15,7 @@ class LlamaCppModel(BaseModel):
             repo_id=self.llm_name,
             filename=self.file_name,
             n_gpu_layers=-1,
-            n_ctx=2048,
+            n_ctx=2048+512,
             verbose=False,
             seed=19181111
         )
@@ -41,7 +41,7 @@ class LlamaCppModel(BaseModel):
                 temperature=temperature, 
                 stream=True,
                 logprobs=True,
-                max_tokens=None,
+                max_tokens=2048,
                 stop=['</think>'],
             )        
             for i, content in enumerate(think_generator):
