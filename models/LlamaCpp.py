@@ -53,6 +53,11 @@ class LlamaCppModel(BaseModel):
                     token = ''
                 output += token
             output += '</think>'
+            
+        prompts.append({
+            'role': 'assistant', 
+            'content': output
+        })
 
         generator = self.llm.create_chat_completion(
                 prompts, 
@@ -70,6 +75,8 @@ class LlamaCppModel(BaseModel):
             except KeyError as e:
                 token = ''
             output += token
+        
+        prompts.pop()
         return raw_input, output, first_tok_arr_time, len(output)
     
 

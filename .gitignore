@@ -6,3 +6,4 @@ data/
 *.json
 *.sh
 */__pycache__
+/scripts
