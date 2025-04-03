@@ -25,7 +25,7 @@ class LlamaCppModel(BaseModel):
         return llama_cpp.llama_grammar.LlamaGrammar.from_json_schema(json_schema)
 
 
-    def _call_engine(self, prompts, compiled_grammar):
+    def _call_engine(self, prompts, compiled_grammar, temperature):
         # segfault_check = self._check_grammar_safety(compiled_grammar)
         first_tok_arr_time = None
         if isinstance(prompts, str):
@@ -38,10 +38,10 @@ class LlamaCppModel(BaseModel):
             # Let it generate thinking process first
             think_generator = self.llm.create_chat_completion(
                 prompts, 
-                temperature=0.2, 
+                temperature=temperature, 
                 stream=True,
                 logprobs=True,
-                max_tokens=2048,
+                max_tokens=None,
                 stop=['</think>'],
             )        
             for i, content in enumerate(think_generator):
@@ -62,7 +62,7 @@ class LlamaCppModel(BaseModel):
         generator = self.llm.create_chat_completion(
                 prompts, 
                 grammar=compiled_grammar, 
-                temperature=0.2, 
+                temperature=temperature, 
                 stream=True,
                 logprobs=True,
                 max_tokens=512,

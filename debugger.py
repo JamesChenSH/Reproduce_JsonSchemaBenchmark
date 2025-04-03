@@ -56,6 +56,7 @@ def add_args():
     parser.add_argument("--model", type=str, default='unsloth/Meta-Llama-3.1-8B-Instruct')
     parser.add_argument("--wrapper", type=str, default='guidance')
     parser.add_argument("--is_cpp", action='store_true', help="Use llama_cpp backend")
+    parser.add_argument("--temperature", type=float, default=0.6)
     return parser
 
 
@@ -106,7 +107,7 @@ def run_debugger(args, example_questions, example_answers):
 
     while True:
         # Let the model generate
-        raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA)
+        raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA, args.temperature)
         # save the output to a json file
         output_str = ""
         output_str += "Assistant:\n"

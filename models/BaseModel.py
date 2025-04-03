@@ -16,7 +16,7 @@ class BaseModel:
             status = "schema_not_supported"
         return compiled_grammar, status
     
-    def generate(self, prompt, json_schema=None):
+    def generate(self, prompt, json_schema=None, temperature=0.2):
         compile_start_time = time.time()
         compiled_grammar = self.compile_grammar(json_schema)
         compile_end_time = time.time()
@@ -25,7 +25,7 @@ class BaseModel:
         
         # print("Generating output")
         gen_start_time = time.time()
-        output, first_tok_arr_time, gen_length = self._call_engine(prompt,compiled_grammar)
+        output, first_tok_arr_time, gen_length = self._call_engine(prompt,compiled_grammar, temperature)
         # TTFT (Time to First Token)
         ttft = first_tok_arr_time - compile_start_time
         # print("Output generated")
@@ -36,12 +36,12 @@ class BaseModel:
         
         return output, gct, ttft, tgt, avg_token_gen_time
     
-    def generate_all(self, prompts, json_schema=None):
+    def generate_all(self, prompts, json_schema=None, temperature=0.2):
         compiled_grammar = self.compile_grammar(json_schema)
-        raw_input, output, first_tok_arr_time, gen_length = self._call_engine(prompts,compiled_grammar)
+        raw_input, output, first_tok_arr_time, gen_length = self._call_engine(prompts, compiled_grammar, temperature)
         return raw_input, output, gen_length
     
-    def _call_engine(self, prompt, compiled_grammar):
+    def _call_engine(self, prompt, compiled_grammar, temperature):
         raise NotImplementedError
     
     def close_model(self):

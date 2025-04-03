@@ -49,6 +49,7 @@ def get_args_parser():
     parser.add_argument("--json_shots", action='store_true', default=False)
     parser.add_argument("--n_range", type=int, default=None, help="Run a systematic test on the given wrapper from n_shot=1 to n_shot=n_range")
     parser.add_argument("--n_exp", type=int, default=3, help="Number of times to run each test")
+    parser.add_argument("--temperature", type=float, default=0.6)
 
     # Display options
     parser.add_argument("--verbose", action='store_true', default=False)
@@ -73,7 +74,7 @@ def get_model(args) -> BaseModel:
         assert not model, "Multiple models specified"
         model = VanillaModel(llm_name, args.is_cpp)
     
-    if wrapper_name == 'llm+guidance':
+    if wrapper_name == 'llm+debug':
         from models.LLMDebug import VanillaModel
         assert not model, "Multiple models specified"
         model = VanillaModel(llm_name, args.is_cpp)
@@ -185,7 +186,8 @@ def test_Quality(
     logger: Logger, 
     output_file_name: str, 
     use_json_shots=False, 
-    is_cpp=True):
+    is_cpp=True,
+    temperature: float = 0.6):
     '''
     Run a quality test using the given parameters. It gets the accuracy of the model performing
     on given dataset. 
@@ -240,7 +242,7 @@ def test_Quality(
         # Run LLM here
         try: 
             # If run Vanilla LLM model, although we are passing the output_schema, it is not used
-            raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA)
+            raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA, temperature=temperature)
         except Exception as e:
             logger.log(f"Question {i}: Generation Error: {e}")
             question_log = {

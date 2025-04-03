@@ -37,7 +37,7 @@ class VanillaModel(BaseModel):
     def compile_grammar(self, json_schema=None):
         return None
     
-    def _call_engine(self, prompts, compiled_grammar):
+    def _call_engine(self, prompts, compiled_grammar, temperature):
         if self.is_cpp:
             # LlamaCpp Model
             # raw_input = self.llm.apply_chat_template(prompts)
@@ -45,7 +45,7 @@ class VanillaModel(BaseModel):
 
             generator = self.llm.create_chat_completion(
                 prompts,  
-                temperature=0.2, 
+                temperature=temperature, 
                 stream=True,
                 max_tokens=2048
             )

@@ -39,6 +39,8 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
     Then add the user's question to the prompt.
     '''
     n_needed = n_shots
+    example_question = []
+    example_answer = []
     if use_static_first_three:
         if n_shots <= len(EXAMPLE_QUESTION):
             example_question = EXAMPLE_QUESTION[:n_shots]

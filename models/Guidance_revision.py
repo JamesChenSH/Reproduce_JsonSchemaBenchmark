@@ -42,7 +42,7 @@ class GuidanceModel(BaseModel):
         return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=0.6, max_tokens=512)
     
     
-    def _call_engine(self, prompt, compiled_grammar):
+    def _call_engine(self, prompt, compiled_grammar, temperature):
         len_prompt = 0
         generator = self.guidance_model.stream()
         first_state_arr_time = None
@@ -76,7 +76,7 @@ class GuidanceModel(BaseModel):
                 start_of_think = "<think>"
                 end_of_think = "</think>"
                 with assistant():
-                    think_gen = generator + start_of_think + gen(stop=end_of_think)            
+                    think_gen = generator + start_of_think + gen(temperature=temperature, stop=end_of_think)            
                     for i, state in enumerate(think_gen):
                         if i == 0:
                             first_state_arr_time = time.time()
@@ -91,6 +91,7 @@ class GuidanceModel(BaseModel):
                 return raw_input, output, first_state_arr_time, len(output)
 
         # Add grammar
+        compiled_grammar.temperature = temperature
         with assistant():
             generator = generator + compiled_grammar 
             for j, state in enumerate(generator):

@@ -38,14 +38,13 @@ class GuidanceModel(BaseModel):
             self.guidance_model = models.Transformers(model, tokenizer) 
         
     
-    def compile_grammar(self, json_schema):
-        return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=0.6, max_tokens=512)
+    def compile_grammar(self, json_schema, temperature=0.2):
+        return guidance.json(name='json_response', schema=json.loads(json_schema), temperature=temperature, max_tokens=512)
     
     
-    def _call_engine(self, prompt, compiled_grammar):
+    def _call_engine(self, prompt, compiled_grammar, temperature):
         len_prompt = 0
         first_state_arr_time = None
-        
         # begin and end of overall context
         bot = '<｜begin▁of▁sentence｜>' if "DeepSeek" in self.llm_name else '<|begin_of_text|>'
         eot = '<｜end▁of▁sentence｜>' if "DeepSeek" in self.llm_name else '<|end_of_text|>'
@@ -86,7 +85,7 @@ class GuidanceModel(BaseModel):
             if "DeepSeek-R1" in self.llm_name and end_of_think not in all_prompts:
                 if start_of_think not in all_prompts:
                     all_prompts = all_prompts + start_of_think
-                think_gen = self.guidance_model + all_prompts + gen(stop=end_of_think)
+                think_gen = self.guidance_model + all_prompts + gen(temperature=temperature, stop=end_of_think)
                 # Generate until </think> token
                 state = str(think_gen) + end_of_think + '\n\n'
                 generator = self.guidance_model + state

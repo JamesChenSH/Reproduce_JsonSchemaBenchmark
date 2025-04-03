@@ -42,7 +42,7 @@ class VanillaModel(BaseModel):
         return None
     
     
-    def _call_engine(self, prompt, compiled_grammar):
+    def _call_engine(self, prompt, compiled_grammar, temperature):
         len_prompt = 0
         first_state_arr_time = None
         
@@ -88,7 +88,7 @@ class VanillaModel(BaseModel):
                 if start_of_think not in all_prompts:
                     all_prompts = all_prompts + start_of_think
         
-        generator = self.guidance_model + all_prompts + gen()
+        generator = self.guidance_model + all_prompts + gen(temperature=temperature)
         output = str(generator)[len_prompt:]
         # print(output)
         return raw_input, output, first_state_arr_time, len(output)
