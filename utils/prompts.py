@@ -9,7 +9,7 @@ EXAMPLE_QUESTION = [
 EXAMPLE_RESPONSE = [
     """{"reasoning": "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = <<21-15=6>>6.", "answer": 6}""",
     """{"reasoning": "There are originally 3 cars. 2 more cars arrive. 3 + 2 = <<3+2=5>>5.", "answer": 5}""",
-    """{"reasoning": "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = <<32+42=74>>74. After eating 35, they had 74 - 35 = <<74-35=39>>39.","answer": 39"""
+    """{"reasoning": "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = <<32+42=74>>74. After eating 35, they had 74 - 35 = <<74-35=39>>39.","answer": 39}"""
 ]
 
 EXAMPLE_NL_RESPONSE = [
@@ -33,19 +33,20 @@ def parse_answer(answer:str):
     return json.dumps(ans)
     
 
-def create_prompt_template(example_questions=None, example_answers=None, n_shots=3, is_json=False, is_deepseek=False):
+def create_prompt_template(example_questions=None, example_answers=None, n_shots=3, is_json=False, is_deepseek=False, use_static_first_three=False):
     '''
     Create the chat template prompt with 3 given example questions and responses.
     Then add the user's question to the prompt.
     '''
-    n_needed = 0
-    if n_shots <= len(EXAMPLE_QUESTION):
-        example_question = EXAMPLE_QUESTION[:n_shots]
-        example_answer = EXAMPLE_RESPONSE[:n_shots] if is_json else EXAMPLE_NL_RESPONSE[:n_shots]
-    else:
-        example_question = EXAMPLE_QUESTION
-        example_answer = EXAMPLE_RESPONSE if is_json else EXAMPLE_NL_RESPONSE
-        n_needed = n_shots - len(EXAMPLE_QUESTION)
+    n_needed = n_shots
+    if use_static_first_three:
+        if n_shots <= len(EXAMPLE_QUESTION):
+            example_question = EXAMPLE_QUESTION[:n_shots]
+            example_answer = EXAMPLE_RESPONSE[:n_shots] if is_json else EXAMPLE_NL_RESPONSE[:n_shots]
+        else:
+            example_question = EXAMPLE_QUESTION
+            example_answer = EXAMPLE_RESPONSE if is_json else EXAMPLE_NL_RESPONSE
+            n_needed = n_shots - len(EXAMPLE_QUESTION)
         
     example_question.extend(example_questions[:n_needed])
     example_answer.extend(example_answers[:n_needed])

@@ -69,10 +69,15 @@ def get_model(args) -> BaseModel:
     llm_name = args.model
     
     if wrapper_name == 'llm':
-        from models.Vanilla import VanillaModel
+        from models.LLM import VanillaModel
         assert not model, "Multiple models specified"
         model = VanillaModel(llm_name, args.is_cpp)
     
+    if wrapper_name == 'llm+guidance':
+        from models.LLMDebug import VanillaModel
+        assert not model, "Multiple models specified"
+        model = VanillaModel(llm_name, args.is_cpp)
+
     if wrapper_name == 'guidance':
         from models.Guidance_quality import GuidanceModel
         # llama cpp method
@@ -106,12 +111,19 @@ def validate_answer(question, output: str, answer:int, is_json=False) -> tuple[b
     na_reasoning = "N/A"
     if is_json:
         # The case we expect output to generate JSON outputs
-        # Check validity
         try:
             # Skip thinking process that may occur in DeepSeek model
             if "</think>" in output:
                 output = output[output.find("</think>") + len("</think>"):]
+
+            # Handle characters json cannot decode
+            output = output.replace("\\", "")
+            json_start_idx = output.find("{")
+            if json_start_idx == -1:
+                raise json.JSONDecodeError("Invalid JSON", output, 0)
+            output = output[json_start_idx:]
             output = json.loads(output)
+
         except json.JSONDecodeError:
             error_msg = 'Failed to parse output'
             parsed_json = {
@@ -237,7 +249,7 @@ def test_Quality(
                 "correct_answer": answer,
                 "generated_raw": "N/A",
                 "parsed_json": "N/A",
-                "error_message": "Error During Generation",
+                "error_message": "Error During Generation, error message: " + str(e),
                 "correct": False
             }
             # Save logs
