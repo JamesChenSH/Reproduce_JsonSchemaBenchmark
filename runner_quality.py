@@ -1,8 +1,11 @@
 import os, json, random, torch, time
+
+import config
 from argparse import ArgumentParser
 from tqdm import tqdm
 
-# os.environ['HF_HOME'] = './cache/'
+os.environ['HF_HOME'] = config.HF_HOME
+
 # os.environ['HF_DATASETS_OFFLINE'] = '1'
 # os.environ['HF_HUB_OFFLINE'] = '1'
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
@@ -275,8 +278,9 @@ def test_Quality(
 
         if isinstance(iterator, tqdm):
             iterator.set_description(f"Correct: {correct}/{i+1}")
-        # if i % 100 == 0:
-            # logger.log(f"Question {i} completed", force=True)
+        else:
+            if i % 100 == 0:
+                logger.log(f"Question {i} completed", force=True)
         
     acc = correct/len(questions)*100
     

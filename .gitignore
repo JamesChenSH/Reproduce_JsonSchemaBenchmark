@@ -7,3 +7,4 @@ data/
 *.sh
 */__pycache__
 /scripts
+config.*

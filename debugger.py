@@ -21,7 +21,9 @@ Main Loop:
 '''
 
 from argparse import ArgumentParser
-import json, os
+import json, os, config
+
+os.environ["HF_HOME"] = config.HF_HOME
 
 from datasets import load_dataset
 from utils import prompts
