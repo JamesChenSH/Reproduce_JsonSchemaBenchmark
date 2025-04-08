@@ -22,7 +22,7 @@ class VanillaModel(BaseModel):
                 filename=self.file_name,
                 n_gpu_layers=-1,
                 logits_all=True,
-                n_ctx=2048+512,
+                n_ctx=4096,
                 verbose=False,
                 seed=19181111,
             )     
@@ -88,7 +88,7 @@ class VanillaModel(BaseModel):
                 if start_of_think not in all_prompts:
                     all_prompts = all_prompts + start_of_think
         
-        generator = self.guidance_model + all_prompts + gen(temperature=temperature)
+        generator = self.guidance_model + all_prompts + gen(temperature=temperature, max_tokens=2560)
         output = str(generator)[len_prompt:]
         # print(output)
         return raw_input, output, first_state_arr_time, len(output)

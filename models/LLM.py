@@ -15,7 +15,7 @@ class VanillaModel(BaseModel):
                 filename=self.file_name,
                 n_gpu_layers=-1,
                 logits_all=True,
-                n_ctx=2048,
+                n_ctx=4096,
                 verbose=False,
                 seed=19181111
             )
@@ -47,7 +47,7 @@ class VanillaModel(BaseModel):
                 prompts,  
                 temperature=temperature, 
                 stream=True,
-                max_tokens=2048
+                max_tokens=2560
             )
             output = ""
             for i, content in enumerate(generator):
@@ -60,7 +60,7 @@ class VanillaModel(BaseModel):
                 output += token
             return raw_input, output, first_tok_arr_time, i
         else:
-            output = self.llm(prompts, max_length=512)[0]['generated_text'][-1]['content']
+            output = self.llm(prompts, max_length=2560)[0]['generated_text'][-1]['content']
             return raw_input, output, None, len(output)
         
     def close_model(self):

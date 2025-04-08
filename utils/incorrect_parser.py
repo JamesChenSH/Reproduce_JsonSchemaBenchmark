@@ -103,7 +103,8 @@ if __name__ == "__main__":
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-14-03-26_with_llama"
     # output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-15-33-27"
 
-    output_dir = "/mnt/d/3_research/Constraint Decoding/Reproduce_JsonSchemaBenchmark/outputs/quality_llm+guidance/quality_llm+guidance_JSON_shots_2025-04-02-17-46-32"
+    # output_dir = "/mnt/d/3_research/Constraint Decoding/Reproduce_JsonSchemaBenchmark/outputs/quality_llm+guidance/quality_llm+guidance_JSON_shots_2025-04-02-17-46-32"
+    output_dir = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-04-03-02-20-23"
     parse_one_dir(output_dir)
 
     # try_fix_incorrect_parse('./quality_llm+guidance_8_JSON_shots_run_1.json')

@@ -15,7 +15,7 @@ class LlamaCppModel(BaseModel):
             repo_id=self.llm_name,
             filename=self.file_name,
             n_gpu_layers=-1,
-            n_ctx=2048+512,
+            n_ctx=4096,
             verbose=False,
             seed=19181111
         )

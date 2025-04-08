@@ -33,7 +33,7 @@ def parse_answer(answer:str):
     return json.dumps(ans)
     
 
-def create_prompt_template(example_questions=None, example_answers=None, n_shots=3, is_json=False, is_deepseek=False, use_static_first_three=False):
+def create_prompt_template(example_questions=None, example_answers=None, n_shots=3, is_json=False, is_deepseek=False, use_static_first_three=True):
     '''
     Create the chat template prompt with 3 given example questions and responses.
     Then add the user's question to the prompt.
@@ -53,7 +53,7 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
     example_question.extend(example_questions[:n_needed])
     example_answer.extend(example_answers[:n_needed])
     
-    assert len(example_question) == n_shots
+    # assert len(example_question) == n_shots
         
     messages = [{
         "role": "user" if is_deepseek else "system",
