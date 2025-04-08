@@ -87,6 +87,9 @@ class VanillaModel(BaseModel):
             if "DeepSeek-R1" in self.llm_name and end_of_think not in all_prompts:
                 if start_of_think not in all_prompts:
                     all_prompts = all_prompts + start_of_think
+            
+            if "DeepSeek-R1" in self.llm_name and end_of_think in all_prompts:
+                all_prompts = all_prompts.replace(end_of_think, "\n" + end_of_think + "\n\n")
         
         generator = self.guidance_model + all_prompts + gen(temperature=temperature, max_tokens=2560)
         output = str(generator)[len_prompt:]

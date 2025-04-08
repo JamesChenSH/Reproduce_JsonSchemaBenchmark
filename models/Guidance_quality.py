@@ -92,6 +92,10 @@ class GuidanceModel(BaseModel):
                 generator = self.guidance_model + state
             else:
                 # If not DeepSeek-R1, we just generate the whole prompt
+                # If DeepSeek-R1 but we already have </think> token, we 
+                # just let it continue generation.
+                if "DeepSeek-R1" in self.llm_name:
+                    all_prompts = all_prompts.replace(end_of_think, "\n" + end_of_think + "\n\n")
                 generator = self.guidance_model + all_prompts
 
         # Add grammar
