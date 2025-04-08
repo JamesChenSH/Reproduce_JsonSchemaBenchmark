@@ -60,13 +60,9 @@ def add_args():
     return parser
 
 
-def run_debugger(args, example_questions, example_answers):
-    """
-    Call the engine with the prompt and compiled grammar
-    """
+def debugger(args, example_questions, example_answers):
     model = get_model(args)
     # create prompt
-    print(example_questions, example_answers)
     messages = prompts.create_prompt_template(
         example_questions=example_questions,
         example_answers=example_answers,
@@ -79,71 +75,74 @@ def run_debugger(args, example_questions, example_answers):
     starting_message = "=" * 50 + "\n"
     starting_message += "Starting Debugger\n"
     starting_message += "=" * 50 + "\n"
-    print(starting_message)
 
-    debug_log = {
-        "messages": messages.copy(),
-    }
     pretty_print_messages(messages)
-    # get user input
-    user_input = input("Enter your question: \n")
-    debug_log["question"] = user_input
 
-    print("=" * 50)
-    # Add question to the prompt
-    messages.append({
-        "role": "user",
-        "content": user_input
-    })
-
-    messages.append({
-        "role": "assistant",
-        "content": ""
-    })
-    
-    # Start debugging loop
-    outputs = []
-    refined_assistant = ""
-
+    # Main Loops Starts here
     while True:
-        # Let the model generate
-        raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA, args.temperature)
-        # save the output to a json file
-        output_str = ""
-        output_str += "Assistant:\n"
-        output_str += output + "\n"
-        output_str += "=" * 50 + "\n"
+        input_question = input("Enter your question [Type <EXIT> to quit program]: \n")
 
-        outputs.append([refined_assistant, output])
-        
-        # print the output
-        print("Assistant: ")
-        print(output)
-        # check if the output is acceptable
+        if input_question.lower() == 'exit':
+            print("Exiting Debugger...")
+            break
+
         print("=" * 50)
-        user_input = input("Is the output acceptable? [YES/NO]: ")
+        # Add question to the prompt
+        messages.append({
+            "role": "user",
+            "content": input_question
+        })
 
+        messages.append({
+            "role": "assistant",
+            "content": ""
+        })
+        
+        # Start debugging loop
         while True:
-            if user_input.lower() == 'yes':
-                model.close_model()
-                debug_log["outputs"] = outputs
-                return debug_log
-            elif user_input.lower() == 'no':
-                # Log the current input 
-                # ask the user for a better partial output
-                print("=" * 50)
-                user_input = input("Please provide a better partial output: \n")
-                refined_assistant = user_input
-                messages.pop()
-                messages.append({
-                    "role": "assistant",
-                    "content": user_input
-                })
+            # Let the model generate
+            raw_input, output, _ = model.generate_all(messages, OUTPUT_SCHEMA, args.temperature)
+            # save the output to a json file
+            output_str = ""
+            output_str += "Assistant:\n"
+            output_str += output + "\n"
+            output_str += "=" * 50 + "\n"
+
+            
+            # print the output
+            print("Assistant: ")
+            print(output)
+            # check if the output is acceptable
+            print("=" * 50)
+            user_input = input("Do you want to refine the assistant message? [YES/NO]: ")
+
+            while True:
+                if user_input.lower() == 'no':
+                    # TODO: Log the output
+                    messages.pop()  # Pop the assistant field
+                    messages.pop()  # Pop the previous question 
+                    break
+                elif user_input.lower() == 'yes':
+                    # Log the current input 
+                    # ask the user for a better partial output
+                    print("=" * 50)
+                    user_input = input("Please provide a better partial output: \n")
+                    
+                    messages.pop()
+                    messages.append({
+                        "role": "assistant",
+                        "content": user_input
+                    })
+                    print("=" * 50)
+                    break
+                else:
+                    user_input = input("Invalid input. Please enter [YES/NO].")
+                    continue
+            
+            if user_input.lower() == 'no':
+                # Exit the loop
                 print("=" * 50)
                 break
-            else:
-                user_input = input("Invalid input. Please enter [YES/NO].")
-                continue
 
 
 if __name__ == "__main__":
@@ -180,7 +179,7 @@ if __name__ == "__main__":
                 example_answers.append(example['answer'])
         
     # Run the debugger
-    debug_log = run_debugger(args, example_questions, example_answers)
+    debug_log = debugger(args, example_questions, example_answers)
 
     # Save the debug log to a json file
     with open("debug_log.json", 'w') as f:
