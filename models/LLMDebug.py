@@ -91,7 +91,11 @@ class VanillaModel(BaseModel):
             if "DeepSeek-R1" in self.llm_name and end_of_think in all_prompts:
                 all_prompts = all_prompts.replace(end_of_think, "\n" + end_of_think + "\n\n")
         
-        generator = self.guidance_model + all_prompts + gen(temperature=temperature, max_tokens=2560)
+        generator = self.guidance_model + all_prompts + gen('generation', temperature=temperature, max_tokens=2560)
+        
+        # print(generator.log_prob('generation'))
+        # print(generator['generation'])
+
         output = str(generator)[len_prompt:]
         # print(output)
         return raw_input, output, first_state_arr_time, len(output)
