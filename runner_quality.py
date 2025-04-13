@@ -187,7 +187,9 @@ def test_Quality(
     output_file_name: str, 
     use_json_shots=False, 
     is_cpp=True,
-    temperature: float = 0.6):
+    temperature: float = 0.6,
+    is_deepseek=False,     
+):
     '''
     Run a quality test using the given parameters. It gets the accuracy of the model performing
     on given dataset. 
@@ -213,7 +215,8 @@ def test_Quality(
         example_questions=example_questions, 
         example_answers=example_answers, 
         n_shots=num_shots, 
-        is_json=use_json_shots
+        is_json=use_json_shots,
+        is_deepseek=is_deepseek,
     )
     
     # Define Initial Statistics Values
@@ -414,7 +417,9 @@ if __name__ == "__main__":
                 logger=logger, 
                 output_file_name=output_file_path + ".json",
                 use_json_shots=args.json_shots,
-                is_cpp=args.is_cpp
+                is_cpp=args.is_cpp,
+                is_deepseek='DeepSeek-R1' in args.model,
+                temperature=args.temperature
             )
             accs.append(acc)
         logger.log(f"Average Accuracy: {sum(accs)/len(accs)}", force=True, header="[SYSTEM]", to_file=True)
