@@ -12,7 +12,7 @@ os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 from models.BaseModel import BaseModel
 from utils.logger import Logger
-
+from utils.math_extractor import get_math_from_reasoning
 import utils.prompts as prompts
 
 from datasets import load_dataset
@@ -216,7 +216,11 @@ def test_Quality(
         is_json=use_json_shots
     )
     
+    # Define Initial Statistics Values
     correct = 0
+    total_potential_equations = 0
+    total_parsed_equations = 0
+    total_correct_verified_equations = 0
     
     with open(output_file_name, "w") as f:
         f.write("[")
@@ -275,6 +279,24 @@ def test_Quality(
             "error_message": msg,
             "correct": is_correct
         }
+
+        if msg == "":
+            # Parse math in reasoning
+            reasoning = parsed_json['reasoning']
+            n_equations, n_parsed_equations, n_correct, parsed_equations, incorrects = get_math_from_reasoning(reasoning)
+            # Log the math parsers
+            extracted_math = {
+                "n_equations": n_equations,
+                "n_parsed_equations": n_parsed_equations,
+                "n_correct": n_correct,
+                "parsed_equations": parsed_equations,
+                "incorrects": incorrects
+            }
+            question_log['extracted_math'] = extracted_math
+            total_potential_equations += n_equations
+            total_parsed_equations += n_parsed_equations
+            total_correct_verified_equations += n_correct
+
         # Save logs
         with open(output_file_name, "a") as f:
             json.dump(question_log, f, indent=4)
@@ -300,6 +322,12 @@ def test_Quality(
     
     logger.log("Test Complete", force=True)
     logger.log("Correct: {correct}/{total}, accuracy: {acc}%".format(correct=correct, total=len(questions), acc=acc), force=True, to_file=True)
+
+    logger.log("Total Potential Equations: {total_potential_equations}".format(total_potential_equations=total_potential_equations), force=True, to_file=True)
+    logger.log("Total Parsed Equations: {total_parsed_equations}".format(total_parsed_equations=total_parsed_equations), force=True, to_file=True)
+    logger.log("Total Correct Verified Equations: {total_correct_verified_equations}".format(total_correct_verified_equations=total_correct_verified_equations), force=True, to_file=True)
+    if total_potential_equations > 0:
+        logger.log("Parsed Equation Accuracy: {parsed_equation_acc}%".format(parsed_equation_acc=total_correct_verified_equations/total_parsed_equations*100), force=True, to_file=True)
     
     # Save incorrect answers
     with open(output_file_name, "a") as f:

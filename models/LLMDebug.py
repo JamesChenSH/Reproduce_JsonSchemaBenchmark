@@ -26,7 +26,7 @@ class VanillaModel(BaseModel):
                 verbose=False,
                 seed=19181111,
             )     
-            self.guidance_model = models.LlamaCpp(self.llm)
+            self.guidance_model = models.LlamaCpp(self.llm, compute_log_probs=True)
         else:
             # transformer method
             print(f"Loading model {llm_name}")

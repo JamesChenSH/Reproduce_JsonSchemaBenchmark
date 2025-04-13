@@ -1,14 +1,84 @@
-import re, json
+import re, json, math
+
+def eval_equation(equation):
+    total_structured_equations += 1
+    # Evaluate the equation
+    equation = equation[2:-2]
+    # Replace all whitespace and commas
+    equation = equation.replace(" ", "")
+    equation = equation.replace(",", "")
+    
+    equation = equation.split("=")
+    lhs = equation[0]
+    # Remove any whitespace from lhs
+    rhs = equation[1]
+    # Find decimal of rhs
+    if len(rhs.split(".")) > 1:
+        dec = len(rhs.split(".")[1])
+        eval_res = round(eval(lhs), dec)
+        rhs = ".".join(rhs.split(".")[0:2])
+    else:
+        eval_res = eval(lhs)
+    if math.isclose(eval_res, float(rhs)):
+        return True
+    return False
+
+
+
+def get_math_from_reasoning(string):
+    '''
+    Step 1, split reasoning by [,.;:!?]
+    Step 2, use regex to estimate number of equations in each subsentence: 
+        - if there is a match to [+-*/^], this subsentence is considered having a math equation
+    Step 3, use regex to find all equations with <<>> format in the subsentence
+        - if there is a match to <<>>, this subsentence is considered having a structured math equation
+        - Evaluate the equation and check if it is correct
+        - If incorrect, record the equation
+    Step 4, Record # of equations, and # of structured equations in the reasoning
+
+    Returns:
+        - total_equations: total number of equations in the reasoning
+        - total_structured_equations: total number of structured equations in the reasoning
+        - equations: list of all parsed structured equations in the reasoning
+
+    '''
+
+    total_equations = 0
+    total_structured_equations = 0
+    incorrect_equations = []
+    correct_count = 0
+
+    # Step 1
+    subsentences = re.split(r'[,.;:!?]', string)
+    for subsentence in subsentences:
+        # Step 2
+        if re.search(r'[+-/*^]', subsentence):
+            total_equations += 1
+            # Step 3
+            matches = get_math(subsentence)
+            if matches:
+                for match in matches:
+                    # Step 4
+                    total_structured_equations += 1
+                    if not eval_equation(match):
+                        incorrect_equations.append(match)
+                    else:
+                        correct_count += 1
+            
+                
+    return total_equations, total_structured_equations, correct_count, matches, incorrect_equations
+
 
 def get_math(string):
     pattern = re.compile(r'<<.*?>>')
     matches = re.findall(pattern=pattern, string=string)
     return matches
 
-if __name__ == "__main__":
+
+def get_math_from_json(out_path):
+
     # out_path = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-15-33-27_deepseek_r1"
     out_path = "/w/284/jameschen/Reproduce_JsonSchemaBenchmark/outputs/quality_guidance/quality_guidance_JSON_shots_2025-03-26-14-03-26_with_llama"
-    
     json_file = f"{out_path}/all_incorrects.json"
     with open(json_file, 'r') as f:
         jsons = json.load(f)
@@ -72,3 +142,8 @@ if __name__ == "__main__":
     print(f"From overall of {len(jsons)} equations:")
     print(f"Found incorrect math: {c_total_incorrect}")
     print(f"Invalid math reasoning: {len(no_valid_equation)}")
+
+
+if __name__ == "__main__":
+    pass
+    # get_math_from_json(json_file)
