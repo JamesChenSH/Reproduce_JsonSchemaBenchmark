@@ -18,7 +18,7 @@ def eval_equation(equation):
             rhs = ".".join(rhs.split(".")[0:2])
         else:
             eval_res = eval(lhs)
-        if math.isclose(eval_res, eval(rhs)):
+        if math.isclose(eval_res, float(eval(rhs))):
             return True
     except Exception as e:
         return False
