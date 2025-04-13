@@ -51,7 +51,7 @@ class VanillaModel(BaseModel):
         eot = '<｜end▁of▁sentence｜>' if "DeepSeek" in self.llm_name else '<|end_of_text|>'
 
         # begin and end of each role
-        hdr = '<｜{role}｜>' if "DeepSeek" in self.llm_name else '<|start_header_id|>{role}<|end_header_id|>'
+        hdr = '<｜{role}｜>' if "DeepSeek" in self.llm_name else '<|start_header_id|>{role}<|end_header_id|>\n\n'
         eos = '' if "DeepSeek" in self.llm_name else '<|eot_id|>'
 
         if isinstance(prompt, str):
