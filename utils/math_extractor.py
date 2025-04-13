@@ -1,26 +1,27 @@
 import re, json, math
 
 def eval_equation(equation):
-    total_structured_equations += 1
     # Evaluate the equation
     equation = equation[2:-2]
     # Replace all whitespace and commas
     equation = equation.replace(" ", "")
     equation = equation.replace(",", "")
-    
-    equation = equation.split("=")
-    lhs = equation[0]
-    # Remove any whitespace from lhs
-    rhs = equation[1]
-    # Find decimal of rhs
-    if len(rhs.split(".")) > 1:
-        dec = len(rhs.split(".")[1])
-        eval_res = round(eval(lhs), dec)
-        rhs = ".".join(rhs.split(".")[0:2])
-    else:
-        eval_res = eval(lhs)
-    if math.isclose(eval_res, float(rhs)):
-        return True
+    try:
+        equation = equation.split("=")
+        lhs = equation[0]
+        # Remove any whitespace from lhs
+        rhs = equation[1]
+        # Find decimal of rhs
+        if len(rhs.split(".")) > 1:
+            dec = len(rhs.split(".")[1])
+            eval_res = round(eval(lhs), dec)
+            rhs = ".".join(rhs.split(".")[0:2])
+        else:
+            eval_res = eval(lhs)
+        if math.isclose(eval_res, eval(rhs)):
+            return True
+    except Exception as e:
+        return False
     return False
 
 
@@ -45,8 +46,9 @@ def get_math_from_reasoning(string):
 
     total_equations = 0
     total_structured_equations = 0
-    incorrect_equations = []
     correct_count = 0
+    incorrect_equations = []
+    all_matches = []
 
     # Step 1
     subsentences = re.split(r'[,.;:!?]', string)
@@ -57,6 +59,7 @@ def get_math_from_reasoning(string):
             # Step 3
             matches = get_math(subsentence)
             if matches:
+                all_matches.extend(matches)
                 for match in matches:
                     # Step 4
                     total_structured_equations += 1
@@ -66,7 +69,7 @@ def get_math_from_reasoning(string):
                         correct_count += 1
             
                 
-    return total_equations, total_structured_equations, correct_count, matches, incorrect_equations
+    return total_equations, total_structured_equations, correct_count, all_matches, incorrect_equations
 
 
 def get_math(string):

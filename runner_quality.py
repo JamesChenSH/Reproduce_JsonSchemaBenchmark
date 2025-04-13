@@ -293,8 +293,9 @@ def test_Quality(
                 "n_parsed_equations": n_parsed_equations,
                 "n_correct": n_correct,
                 "parsed_equations": parsed_equations,
-                "incorrects": incorrects
             }
+            if len(incorrects) > 0:
+                extracted_math['incorrects'] = incorrects
             question_log['extracted_math'] = extracted_math
             total_potential_equations += n_equations
             total_parsed_equations += n_parsed_equations
