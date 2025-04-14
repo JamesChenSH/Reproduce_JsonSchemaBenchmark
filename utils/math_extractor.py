@@ -55,10 +55,10 @@ def get_math_from_reasoning(string):
     for subsentence in subsentences:
         # Step 2
         if re.search(r'[+-/*^]', subsentence):
-            total_equations += 1
             # Step 3
             matches = get_math(subsentence)
             if matches:
+                total_equations += len(matches)
                 all_matches.extend(matches)
                 for match in matches:
                     # Step 4
@@ -67,6 +67,9 @@ def get_math_from_reasoning(string):
                         incorrect_equations.append(match)
                     else:
                         correct_count += 1
+            else:
+                # Assume there is only one equation in the subsentence
+                total_equations += 1
             
                 
     return total_equations, total_structured_equations, correct_count, all_matches, incorrect_equations

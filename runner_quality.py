@@ -330,7 +330,7 @@ def test_Quality(
     logger.log("Total Potential Equations: {total_potential_equations}".format(total_potential_equations=total_potential_equations), force=True, to_file=True)
     logger.log("Total Parsed Equations: {total_parsed_equations}".format(total_parsed_equations=total_parsed_equations), force=True, to_file=True)
     logger.log("Total Correct Verified Equations: {total_correct_verified_equations}".format(total_correct_verified_equations=total_correct_verified_equations), force=True, to_file=True)
-    if total_potential_equations > 0:
+    if total_parsed_equations > 0:
         logger.log("Parsed Equation Accuracy: {parsed_equation_acc}%".format(parsed_equation_acc=total_correct_verified_equations/total_parsed_equations*100), force=True, to_file=True)
     
     # Save incorrect answers
