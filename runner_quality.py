@@ -116,13 +116,14 @@ def validate_answer(question, output: str, answer:int, is_json=False) -> tuple[b
             # Skip thinking process that may occur in DeepSeek model
             if "</think>" in output:
                 output = output[output.find("</think>") + len("</think>"):]
-
             # Handle characters json cannot decode
             output = output.replace("\\", "")
             json_start_idx = output.find("{")
-            if json_start_idx == -1:
+            json_end_idx = output.rfind("}")
+            if json_start_idx == -1 or json_end_idx < json_start_idx:
+                # either no json is started or json does not end
                 raise json.JSONDecodeError("Invalid JSON", output, 0)
-            output = output[json_start_idx:]
+            output = output[json_start_idx:json_end_idx + 1]
             output = json.loads(output)
 
         except json.JSONDecodeError:
