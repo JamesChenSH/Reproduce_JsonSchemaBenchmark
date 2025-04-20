@@ -163,10 +163,20 @@ def validate_answer(question, output: str, answer:int, is_json=False) -> tuple[b
             return False, parsed_json, error_msg
         
     # If we can get the answer, we can compare it
-    parsed_json = {
-        "reasoning": reasoning,
-        "generated_answer": gen_answer
-    }
+    try:
+        gen_answer = float(gen_answer)    
+        parsed_json = {
+            "reasoning": reasoning,
+            "generated_answer": gen_answer
+        }
+    except:
+        error_msg = 'Failed to parse answer'
+        parsed_json = {
+            "reasoning": reasoning,
+            "generated_answer": gen_answer
+        }
+        return False, parsed_json, error_msg
+    
     if gen_answer == answer:
         # When it is correct
         return True, parsed_json, ""
@@ -287,17 +297,20 @@ def test_Quality(
         if msg == "":
             # Parse math in reasoning
             reasoning = parsed_json['reasoning']
-            n_equations, n_parsed_equations, n_correct, parsed_equations, incorrects = get_math_from_reasoning(reasoning)
-            # Log the math parsers
-            extracted_math = {
-                "n_equations": n_equations,
-                "n_parsed_equations": n_parsed_equations,
-                "n_correct": n_correct,
-                "parsed_equations": parsed_equations,
-            }
-            if len(incorrects) > 0:
-                extracted_math['incorrects'] = incorrects
-            question_log['extracted_math'] = extracted_math
+            try:
+                n_equations, n_parsed_equations, n_correct, parsed_equations, incorrects = get_math_from_reasoning(reasoning)
+                # Log the math parsers
+                extracted_math = {
+                    "n_equations": n_equations,
+                    "n_parsed_equations": n_parsed_equations,
+                    "n_correct": n_correct,
+                    "parsed_equations": parsed_equations,
+                }
+                if len(incorrects) > 0:
+                    extracted_math['incorrects'] = incorrects
+                question_log['extracted_math'] = extracted_math
+            except Exception:
+                question_log['extracted_math'] = "could not parse math"
             total_potential_equations += n_equations
             total_parsed_equations += n_parsed_equations
             total_correct_verified_equations += n_correct

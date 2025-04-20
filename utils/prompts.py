@@ -17,10 +17,16 @@ EXAMPLE_RESPONSE = [
     """{"reasoning": "Originally, Leah had 32 chocolates. Her sister had 42. So in total they had 32 + 42 = <<32+42=74>>74. After eating 35, they had 74 - 35 = <<74-35=39>>39.","answer": 39}""",
     """{"reasoning": "Jason started with 20 lollipops. Then he had 12 after giving some to Denny. So he gave Denny 20 - 12 = <<20-12=8>>8.", "answer": 8}""",
     """{"reasoning": "Shawn started with 5 toys. If he got 2 toys each from his mom and dad, then that is 4 more toys. 5 + 4 = <<5+4=9>>9.", "answer": 9}""",
-    """{"reasoning": "There were originally 9 computers. For each of 4 days, 5 more computers were added. So 5 * 4 = 20 computers were added. 9 + 20 is 29.", "answer": 29}""",
+    """{"reasoning": "There were originally 9 computers. For each of 4 days, 5 more computers were added. So 5 * 4 = <<5*4=20>>20 computers were added. 9 + 20 = <<9+20=29>>29.", "answer": 29}""",
+    # Try with original prompt to test non-randomness.
     """{"reasoning": "Michael started with 58 golf balls. After losing 23 on tuesday, he had 58 - 23 = <<58-23=35>>35. After losing 2 more, he had 35 - 2 = <<35-2=33>>33 golf balls.", "answer": 33}""",
     """{"reasoning": "Olivia had 23 dollars. 5 bagels for 3 dollars each will be 5 x 3 = <<5*3=15>>15 dollars. So she has 23 - 15 dollars left. <<23-15=8>>8.", "answer": 8}"""
 ]
+# TODO: 1. Order the prompt examples in a way that 3 shot is remembered by LLM in 8 shot prompts (e.g. 3 shots in the end).
+# TODO: 2. shuffle the order within the same n shots.
+#       Evaluate LLM difference with buggy prompts in different places of few-shot prompting.
+#       Fixing a bug in the 6th shot made a lot of difference in output math structure.
+# TODO: Verify other models, large or small.
 
 EXAMPLE_NL_RESPONSE = [
     "There are 15 trees originally. Then there were 21 trees after some more were planted. So there must have been 21 - 15 = <<21-15=6>>6.####6",
@@ -75,16 +81,16 @@ def create_prompt_template(example_questions=None, example_answers=None, n_shots
         "role": "user" if is_deepseek else "system",
         "content": dedent(f"""
         You are an expert in solving grade school math tasks. You will be presented with a grade-school math word problem and be asked to solve it.
-        Before answering you should reason about the problem (using the "explanation" field in the JSON response described below).
+        Before answering you should reason about the problem (using the "reasoning" field in the JSON response described below).
         
-        All mathematical calculations in the "explanation" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
+        All mathematical calculations in the "reasoning" field should be in the format LHS = <<LHS=RHS>>RHS, and without units.
         {"All thinkings should be less than 300 words" if is_deepseek else ""}
             
         You will always repond{" with JSON" if is_json else ""} in the format described below:
         
         {EXAMPLE_JSON_STRUCTURE if is_json else EXAMPLE_NL_STRUCTURE}
         
-        The "explanation" field will contain your explanation about the sequence of events, and the "answer" field will contain the single number representing the correct answer you are presented with.
+        The "reasoning" field will contain your explanation about the sequence of events, and the "answer" field will contain the single number representing the correct answer you are presented with.
         """)
     },]
     
